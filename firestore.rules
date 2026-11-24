@@ -15,7 +15,8 @@ service cloud.firestore {
    allow read: if signed() && resource.data.ownerUid == request.auth.uid;
    allow create: if signed() && request.resource.data.keys().hasOnly(['name','segment','ownerUid','createdAt']) && request.resource.data.ownerUid == request.auth.uid && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 && request.resource.data.segment is string && request.resource.data.createdAt == request.time;
    function owner(){return signed() && get(/databases/$(database)/documents/establishments/$(org)).data.ownerUid == request.auth.uid;}
-   allow update: if owner() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','segment']) && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 && request.resource.data.segment is string;
+   allow update: if owner() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','segment','brand']) && (!('brand' in request.resource.data) || validBrand(request.resource.data.brand)) && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 && request.resource.data.segment is string;
+   function validBrand(b){return b is map && b.keys().hasOnly(['logo','address','phone','review']) && b.logo is string && b.logo.size() <= 500 && (b.logo == '' || b.logo.matches('https://.*')) && b.review is string && b.review.size() <= 500 && (b.review == '' || b.review.matches('https://.*')) && b.address is string && b.address.size() <= 250 && b.phone is string && b.phone.size() <= 20;}
    function categoryExists(id){return exists(/databases/$(database)/documents/establishments/$(org)/categories/$(id));}
    function serviceValid(d){return d.keys().hasOnly(['name','priceCents','duration','active','createdAt','categoryId']) && (!('categoryId' in d) || (d.categoryId is string && (d.categoryId == '' || categoryExists(d.categoryId)))) && d.name is string && d.name.size() > 0 && d.name.size() <= 100 && d.priceCents is int && d.priceCents >= 0 && d.priceCents <= 10000000 && d.duration is int && d.duration >= 5 && d.duration <= 720 && d.duration % 5 == 0 && d.active is bool && d.createdAt is timestamp;}
    function proValid(d){return d.keys().hasOnly(['name','specialty','email','photo','active','serviceIds','createdAt','uid']) && d.name is string && d.name.size() > 0 && d.name.size() <= 100 && d.specialty is string && d.specialty.size() > 0 && d.specialty.size() <= 100 && d.email is string && d.email.size() <= 254 && d.photo is string && d.photo.size() <= 120000 && (d.photo == '' || d.photo.matches('https://.*') || d.photo.matches('data:image/jpeg;base64,[A-Za-z0-9+/=]+')) && (!('uid' in d) || (d.uid is string && d.uid.size() <= 128)) && d.active is bool && d.serviceIds is list && d.serviceIds.size() <= 200 && d.createdAt is timestamp;}
@@ -57,9 +58,32 @@ service cloud.firestore {
     allow create, update: if (owner() || assignedProfessional(id)) && request.resource.data.keys().hasOnly(['phone','test','newRequests','tomorrow','tomorrowTime','today','todayTime','end','endTime','individual','minutes']) && request.resource.data.phone is string && request.resource.data.phone.matches('55[0-9]{10,11}') && request.resource.data.test is bool && request.resource.data.newRequests is bool && request.resource.data.tomorrow is bool && request.resource.data.today is bool && request.resource.data.end is bool && request.resource.data.individual is bool && request.resource.data.tomorrowTime.matches('[0-2][0-9]:[0-5][0-9]') && request.resource.data.todayTime.matches('[0-2][0-9]:[0-5][0-9]') && request.resource.data.endTime.matches('[0-2][0-9]:[0-5][0-9]') && request.resource.data.minutes is int && request.resource.data.minutes >= 5 && request.resource.data.minutes <= 1440;
    }
    match /bookingRequests/{id} {
+    function validBookingPrice(serviceId, price) {
+     let serviceDoc = get(/databases/$(database)/documents/establishments/$(org)/services/$(serviceId));
+     return price == serviceDoc.data.priceCents && serviceDoc.data.active == true;
+    }
     allow update: if (owner() || assignedProfessional(resource.data.professional)) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && ((resource.data.status == 'pending' && request.resource.data.status in ['confirmed','cancelled']) || (resource.data.status == 'confirmed' && request.resource.data.status in ['completed','cancelled','no_show']));
     allow read: if owner() || (signed() && (resource.data.uid == request.auth.uid || assignedProfessional(resource.data.professional)));
-    allow create: if signed() && request.resource.data.keys().hasOnly(['uid','email','name','phone','professional','service','date','time','status','createdAt']) && request.resource.data.uid == request.auth.uid && request.resource.data.email == request.auth.token.email && request.resource.data.status == 'pending' && request.resource.data.createdAt == request.time && request.resource.data.name is string && request.resource.data.name.size() <= 100 && request.resource.data.phone is string && request.resource.data.phone.size() <= 20 && exists(/databases/$(database)/documents/publicCatalogs/$(org));
+    function validBooking(d) {
+     return d.keys().hasOnly(['uid','email','name','phone','professional','service','date','time','status','createdAt','priceCents'])
+      && d['service'] is string
+      && d.priceCents is int
+      && validBookingPrice(d['service'], d.priceCents)
+      && d.uid == request.auth.uid
+      && d.email == request.auth.token.email
+      && d.status == 'pending'
+      && d.createdAt == request.time
+      && d.name is string && d.name.size() <= 100
+      && d.phone is string && d.phone.size() <= 20
+      && exists(/databases/$(database)/documents/publicCatalogs/$(org));
+    }
+    allow create: if signed() && validBooking(request.resource.data);
+   }
+   match /feedback/{id} {
+    function bookingData(){return get(/databases/$(database)/documents/establishments/$(org)/bookingRequests/$(id)).data;}
+    allow get: if owner() || (signed() && bookingData().uid == request.auth.uid);
+    allow list: if owner();
+    allow create: if signed() && bookingData().uid == request.auth.uid && bookingData().status == 'completed' && request.resource.data.keys().hasOnly(['uid','score','comment','createdAt']) && request.resource.data.uid == request.auth.uid && request.resource.data.score is int && request.resource.data.score >= 1 && request.resource.data.score <= 5 && request.resource.data.comment is string && request.resource.data.comment.size() <= 500 && request.resource.data.createdAt == request.time;
    }
    match /members/{uid} {
     allow read: if signed() && request.auth.uid == uid;
