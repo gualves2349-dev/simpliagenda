@@ -2,6 +2,10 @@ rules_version = '2';
 service cloud.firestore {
  match /databases/{database}/documents {
   function signed(){return request.auth != null;}
+  match /publicCatalogs/{org} {
+   allow read: if true;
+   allow create, update: if signed() && get(/databases/$(database)/documents/establishments/$(org)).data.ownerUid == request.auth.uid;
+  }
   match /staffAccess/{uid}/profiles/{key} {
    allow read: if signed() && request.auth.uid == uid;
    allow create, update: if signed() && request.resource.data.keys().hasOnly(['org','professional']) && key == request.resource.data.org + '_' + request.resource.data.professional && get(/databases/$(database)/documents/establishments/$(request.resource.data.org)).data.ownerUid == request.auth.uid && getAfter(/databases/$(database)/documents/establishments/$(request.resource.data.org)/professionals/$(request.resource.data.professional)).data.uid == uid;
@@ -26,8 +30,12 @@ service cloud.firestore {
    }
    match /availability/{id} {
     function assigned(){return signed() && get(/databases/$(database)/documents/establishments/$(org)/professionals/$(id)).data.uid == request.auth.uid && get(/databases/$(database)/documents/establishments/$(org)/professionals/$(id)).data.active == true;}
-    allow read: if owner() || assigned();
+    allow read: if owner() || assigned() || exists(/databases/$(database)/documents/publicCatalogs/$(org));
     allow create, update: if (owner() || assigned()) && request.resource.data.keys().hasOnly(['week','daysOff']) && request.resource.data.week is list && request.resource.data.week.size() == 7 && request.resource.data.daysOff is list && request.resource.data.daysOff.size() <= 366;
+   }
+   match /bookingRequests/{id} {
+    allow read: if owner() || (signed() && resource.data.uid == request.auth.uid);
+    allow create: if signed() && request.resource.data.keys().hasOnly(['uid','email','name','phone','professional','service','date','time','status','createdAt']) && request.resource.data.uid == request.auth.uid && request.resource.data.email == request.auth.token.email && request.resource.data.status == 'pending' && request.resource.data.createdAt == request.time && request.resource.data.name is string && request.resource.data.name.size() <= 100 && request.resource.data.phone is string && request.resource.data.phone.size() <= 20 && exists(/databases/$(database)/documents/publicCatalogs/$(org));
    }
    match /members/{uid} {
     allow read: if signed() && request.auth.uid == uid;
