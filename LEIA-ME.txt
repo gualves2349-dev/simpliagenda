@@ -1,13 +1,1 @@
-ETAPA 38.6 - PILOTO LOCAL
-Substitua app.js e index.html no GitHub. Nao publique a pasta Windows.
-Encerre o script F8 anterior. Extraia o ZIP, abra PowerShell na pasta Windows e execute:
-powershell -NoProfile -ExecutionPolicy Bypass -File .\Instalar.ps1
-Teste isolado:
-Start-Process 'simpliagenda://send/teste_manual_01?text=Teste%20SimpliAgenda%20386'
-Abra WhatsApp Desktop antes. Nao mexa no teclado/mouse durante o envio.
-No perfil barbeiro ou gestor, na area de WhatsApp da agenda, marque automacao local e teste conexao.
-Confirme um novo agendamento. O navegador pode pedir permissao para abrir o protocolo.
-O destinatario e fixo no script (numero proprio informado). O link manual continua disponivel.
-O registro .attempt evita repetir o mesmo ID; nao confirma entrega. Se o envio falhar, use o link manual apos verificar a conversa.
-Qualquer site pode tentar invocar protocolos locais: use somente neste piloto e desinstale depois. O script nao valida a origem nem o destinatario visivel na janela; nao use com conversas reais abertas. O foco pode falhar. Nao ha envio em segundo plano.
-Para remover: powershell -NoProfile -ExecutionPolicy Bypass -File .\Desinstalar.ps1
+Piloto 387: substituir index.html e app.js. Manter o AHK corrigido e instalado anteriormente. Automacao ligada por padrao, preferencia persistente local. Somente numero fixo de teste. Eventos novos observados com perfil gestor/barbeiro aberto e visivel; lembretes janela de 10 minutos. Navegador pode bloquear protocolo sem gesto. Historico local indica solicitacao ao Windows, nao entrega. Nao reenvia automaticamente tentativas. Nao usar com clientes reais. Desativar ao terminar. Sem alteracoes Firebase. Sem processamento com navegador fechado. Chrome/Edge com Web Locks necessario.
