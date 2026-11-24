@@ -36,7 +36,7 @@ service cloud.firestore {
     allow create, update: if owner() && id == 'campaign' && request.resource.data.keys().hasOnly(['name','goal','active']) && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 && request.resource.data.goal is int && request.resource.data.goal >= 1 && request.resource.data.goal <= 100 && request.resource.data.active is bool;
    }
    match /rewardBalances/{uid} { allow delete: if owner();
-    allow read: if owner() || (signed() && request.auth.uid == uid);
+    allow read: if owner() || (unitAccess(org) && signed() && request.auth.uid == uid);
     allow create, update: if owner() && request.resource.data.keys().hasOnly(['used','lastReward','updatedAt']) && request.resource.data.used is int && request.resource.data.used > 0 && request.resource.data.lastReward is string && request.resource.data.lastReward.size() <= 100 && request.resource.data.updatedAt == request.time && (!exists(/databases/$(database)/documents/establishments/$(org)/rewardBalances/$(uid)) || request.resource.data.used > resource.data.used);
    }
    match /customers/{id} {
@@ -54,7 +54,7 @@ service cloud.firestore {
     allow update: if owner() && serviceValid(request.resource.data) && request.resource.data.createdAt == resource.data.createdAt;
    }
    match /professionals/{id}{
-    allow read: if owner() || (signed() && resource.data.active == true && resource.data.uid == request.auth.uid);
+    allow read: if owner() || (unitAccess(org) && signed() && resource.data.active == true && resource.data.uid == request.auth.uid);
     allow create: if owner() && proValid(request.resource.data) && request.resource.data.createdAt == request.time;
     allow update: if owner() && proValid(request.resource.data) && request.resource.data.createdAt == resource.data.createdAt;
    }
@@ -74,10 +74,18 @@ service cloud.firestore {
      return price == serviceDoc.data.priceCents && serviceDoc.data.active == true;
     }
     allow update: if (owner() || assignedProfessional(resource.data.professional)) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && ((resource.data.status == 'pending' && request.resource.data.status in ['confirmed','cancelled']) || (resource.data.status == 'confirmed' && request.resource.data.status in ['completed','cancelled','no_show']));
-    allow read: if owner() || (signed() && (resource.data.uid == request.auth.uid || assignedProfessional(resource.data.professional)));
+    allow read: if owner() || (unitAccess(org) && signed() && (resource.data.uid == request.auth.uid || assignedProfessional(resource.data.professional)));
+    function validProfessional(proId, serviceId) {
+     let pro = get(/databases/$(database)/documents/establishments/$(org)/professionals/$(proId));
+     return pro.data.active == true && serviceId in pro.data.serviceIds;
+    }
     function validBooking(d) {
      return d.keys().hasOnly(['uid','email','name','phone','professional','service','date','time','status','createdAt','priceCents'])
       && d['service'] is string
+      && d.professional is string
+      && d.date is string && d.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+      && d.time is string && d.time.matches('([01][0-9]|2[0-3]):[0-5][0-9]')
+      && validProfessional(d.professional, d['service'])
       && d.priceCents is int
       && validBookingPrice(d['service'], d.priceCents)
       && d.uid == request.auth.uid
@@ -92,7 +100,7 @@ service cloud.firestore {
    }
    match /feedback/{id} { allow delete: if owner();
     function bookingData(){return get(/databases/$(database)/documents/establishments/$(org)/bookingRequests/$(id)).data;}
-    allow get: if owner() || (signed() && bookingData().uid == request.auth.uid);
+    allow get: if owner() || (unitAccess(org) && signed() && bookingData().uid == request.auth.uid);
     allow list: if owner();
     allow create: if unitAccess(org) && signed() && bookingData().uid == request.auth.uid && bookingData().status == 'completed' && request.resource.data.keys().hasOnly(['uid','score','comment','createdAt']) && request.resource.data.uid == request.auth.uid && request.resource.data.score is int && request.resource.data.score >= 1 && request.resource.data.score <= 5 && request.resource.data.comment is string && request.resource.data.comment.size() <= 500 && request.resource.data.createdAt == request.time;
    }
