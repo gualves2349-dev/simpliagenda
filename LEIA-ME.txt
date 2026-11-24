@@ -1,0 +1,8 @@
+SIMPLIAGENDA 34–38 — pacote piloto
+GitHub: publique somente index.html, app.js, manifest.webmanifest, sw.js e os dois ícones. Preserve firebase-config.js, style.css e regras da etapa 33.
+34: avisos em sessão aberta, som após interação, histórico em memória.
+35: manifesto e ícones; instalação depende do navegador; sem push em segundo plano.
+36: controle manual existente; cobrança real e webhook não implementados.
+37: bot experimental local, somente número de teste consentido, sem dados pessoais nas mensagens. Não publique a pasta whatsapp-bot no GitHub. API não oficial pode causar bloqueio. Não usar em produção.
+38: revisão estática, não auditoria concluída. Regras ainda não garantem sobreposição integral no servidor; testar permissões, concorrência, cancelamentos e isolamento antes de vender.
+BOT (Windows PowerShell): instale Node.js LTS; abra a pasta whatsapp-bot; npm install; Copy-Item config.example.json config.json; edite config.json com seu número secundário e consentimento. Use credencial Firebase de leitura com menor privilégio possível, guardada fora do repositório. Configure $env:GOOGLE_APPLICATION_CREDENTIALS='D:\segredos\firebase-reader.json'; npm start; escaneie QR em Aparelhos conectados. send:false apenas registra mensagens no console; send:true envia exclusivamente ao número de teste. Reinicie após editar. Eventos existentes no início não são enviados. Não há lembretes, fila durável ou recuperação de eventos durante desligamento. O registro é feito antes do envio para evitar duplicidade; falhas de envio não são repetidas automaticamente. Ctrl+C encerra. Nunca compartilhe credenciais ou pasta de sessão.
