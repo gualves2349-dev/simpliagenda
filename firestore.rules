@@ -24,7 +24,7 @@ service cloud.firestore {
     allow read: if owner();
     allow create, update: if owner() && id == 'campaign' && request.resource.data.keys().hasOnly(['name','goal','active']) && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 && request.resource.data.goal is int && request.resource.data.goal >= 1 && request.resource.data.goal <= 100 && request.resource.data.active is bool;
    }
-   match /rewardBalances/{uid} {
+   match /rewardBalances/{uid} { allow delete: if owner();
     allow read: if owner() || (signed() && request.auth.uid == uid);
     allow create, update: if owner() && request.resource.data.keys().hasOnly(['used','lastReward','updatedAt']) && request.resource.data.used is int && request.resource.data.used > 0 && request.resource.data.lastReward is string && request.resource.data.lastReward.size() <= 100 && request.resource.data.updatedAt == request.time && (!exists(/databases/$(database)/documents/establishments/$(org)/rewardBalances/$(uid)) || request.resource.data.used > resource.data.used);
    }
@@ -36,7 +36,7 @@ service cloud.firestore {
     allow read: if owner();
     allow create, update: if owner() && request.resource.data.keys().hasOnly(['name']) && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 80;
    }
-   match /bookingLocks/{id} { allow get: if owner() || exists(/databases/$(database)/documents/publicCatalogs/$(org)); allow list: if owner(); allow create, update: if owner() || (assignedProfessional(request.resource.data.professional) && id == request.resource.data.professional + '_' + request.resource.data.date && request.resource.data.keys().hasOnly(['professional','date','slots']) && request.resource.data.slots is list); }
+   match /bookingLocks/{id} { allow delete: if owner(); allow get: if owner() || exists(/databases/$(database)/documents/publicCatalogs/$(org)); allow list: if owner(); allow create, update: if owner() || (assignedProfessional(request.resource.data.professional) && id == request.resource.data.professional + '_' + request.resource.data.date && request.resource.data.keys().hasOnly(['professional','date','slots']) && request.resource.data.slots is list); }
    match /services/{id}{
     allow read: if owner();
     allow create: if owner() && serviceValid(request.resource.data) && request.resource.data.createdAt == request.time;
@@ -57,7 +57,7 @@ service cloud.firestore {
     allow read: if owner() || assignedProfessional(id);
     allow create, update: if (owner() || assignedProfessional(id)) && request.resource.data.keys().hasOnly(['phone','test','newRequests','tomorrow','tomorrowTime','today','todayTime','end','endTime','individual','minutes']) && request.resource.data.phone is string && request.resource.data.phone.matches('55[0-9]{10,11}') && request.resource.data.test is bool && request.resource.data.newRequests is bool && request.resource.data.tomorrow is bool && request.resource.data.today is bool && request.resource.data.end is bool && request.resource.data.individual is bool && request.resource.data.tomorrowTime.matches('[0-2][0-9]:[0-5][0-9]') && request.resource.data.todayTime.matches('[0-2][0-9]:[0-5][0-9]') && request.resource.data.endTime.matches('[0-2][0-9]:[0-5][0-9]') && request.resource.data.minutes is int && request.resource.data.minutes >= 5 && request.resource.data.minutes <= 1440;
    }
-   match /bookingRequests/{id} {
+   match /bookingRequests/{id} { allow delete: if owner();
     function validBookingPrice(serviceId, price) {
      let serviceDoc = get(/databases/$(database)/documents/establishments/$(org)/services/$(serviceId));
      return price == serviceDoc.data.priceCents && serviceDoc.data.active == true;
@@ -79,7 +79,7 @@ service cloud.firestore {
     }
     allow create: if signed() && validBooking(request.resource.data);
    }
-   match /feedback/{id} {
+   match /feedback/{id} { allow delete: if owner();
     function bookingData(){return get(/databases/$(database)/documents/establishments/$(org)/bookingRequests/$(id)).data;}
     allow get: if owner() || (signed() && bookingData().uid == request.auth.uid);
     allow list: if owner();
