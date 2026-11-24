@@ -57,9 +57,18 @@ service cloud.firestore {
      let booking = getAfter(path).data;
      return signed() && unitAccess(org) && d.keys().hasOnly(['professional','date','slots']) && d.slots is list && d.slots.size() == oldSlots.size()+1 && d.slots == oldSlots.concat([slot]) && slot.keys().hasOnly(['id','start','end']) && slot.start is int && slot.end is int && slot.start >= 0 && slot.end <= 1440 && slot.end > slot.start && !exists(path) && booking.uid == request.auth.uid && booking.status == 'pending' && booking.professional == d.professional && booking.date == d.date && id == d.professional+'_'+d.date;
     }
+    function customerRelease() {
+     let d = request.resource.data;
+     let path = /databases/$(database)/documents/establishments/$(org)/bookingRequests/$(d.releasedBooking);
+     let old = get(path).data;
+     let after = getAfter(path).data;
+     let slot = resource.data.slots[d.releasedIndex];
+     return signed() && unitAccess(org) && d.keys().hasOnly(['professional','date','slots','releasedBooking','releasedIndex']) && d.releasedIndex is int && d.releasedIndex >= 0 && d.releasedIndex < resource.data.slots.size() && old.uid == request.auth.uid && old.status == 'confirmed' && after.status == 'cancelled' && old.professional == d.professional && old.date == d.date && d.professional == resource.data.professional && d.date == resource.data.date && id == d.professional+'_'+d.date && slot.id == d.releasedBooking && d.slots == resource.data.slots.removeAll([slot]);
+    }
+    allow update: if customerRelease();
     allow create: if customerAppend([]);
     allow update: if customerAppend(resource.data.slots);
- allow delete: if owner(); allow get: if (unitAccess(org) && exists(/databases/$(database)/documents/publicCatalogs/$(org))) || owner(); allow list: if owner(); allow create, update: if owner() || (assignedProfessional(request.resource.data.professional) && id == request.resource.data.professional + '_' + request.resource.data.date && request.resource.data.keys().hasOnly(['professional','date','slots']) && request.resource.data.slots is list); }
+ allow delete: if owner(); allow get: if (unitAccess(org) && exists(/databases/$(database)/documents/publicCatalogs/$(org))) || owner(); allow list: if owner(); allow create, update: if owner() || (assignedProfessional(request.resource.data.professional) && id == request.resource.data.professional + '_' + request.resource.data.date && request.resource.data.keys().hasOnly(['professional','date','slots','releasedBooking','releasedIndex']) && request.resource.data.slots is list); }
    match /services/{id}{
     allow read: if owner();
     allow create: if owner() && serviceValid(request.resource.data) && request.resource.data.createdAt == request.time;
@@ -86,7 +95,12 @@ service cloud.firestore {
      let serviceDoc = get(/databases/$(database)/documents/establishments/$(org)/services/$(serviceId));
      return price == serviceDoc.data.priceCents && serviceDoc.data.active == true;
     }
-    allow update: if (owner() || assignedProfessional(resource.data.professional)) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && ((resource.data.status == 'pending' && request.resource.data.status in ['confirmed','cancelled']) || (resource.data.status == 'confirmed' && request.resource.data.status in ['completed','cancelled','no_show']));
+    function validCancellation() {
+     let d = request.resource.data;
+     return d.diff(resource.data).affectedKeys().hasOnly(['status','cancelReason','cancelledBy','cancelledAt']) && d.status == 'cancelled' && d.cancelReason is string && d.cancelReason.size() <= 500 && d.cancelReason.matches('.*[^\\s].*') && d.cancelledBy == request.auth.uid && d.cancelledAt == request.time;
+    }
+    allow update: if (owner() || assignedProfessional(resource.data.professional)) && ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && ((resource.data.status == 'pending' && request.resource.data.status == 'confirmed') || (resource.data.status == 'confirmed' && request.resource.data.status in ['completed','no_show']))) || (resource.data.status in ['pending','confirmed'] && validCancellation()));
+    allow update: if signed() && unitAccess(org) && resource.data.uid == request.auth.uid && resource.data.status == 'confirmed' && validCancellation();
     allow read: if owner() || (unitAccess(org) && signed() && (resource.data.uid == request.auth.uid || assignedProfessional(resource.data.professional)));
     function validProfessional(proId, serviceId) {
      let pro = get(/databases/$(database)/documents/establishments/$(org)/professionals/$(proId));
