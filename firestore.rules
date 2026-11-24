@@ -27,7 +27,7 @@ service cloud.firestore {
     allow read: if owner();
     allow create, update: if owner() && request.resource.data.keys().hasOnly(['name']) && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 80;
    }
-   match /bookingLocks/{id} { allow get: if owner() || exists(/databases/$(database)/documents/publicCatalogs/$(org)); allow list, write: if owner(); }
+   match /bookingLocks/{id} { allow get: if owner() || exists(/databases/$(database)/documents/publicCatalogs/$(org)); allow list: if owner(); allow create, update: if owner() || (assignedProfessional(request.resource.data.professional) && id == request.resource.data.professional + '_' + request.resource.data.date && request.resource.data.keys().hasOnly(['professional','date','slots']) && request.resource.data.slots is list); }
    match /services/{id}{
     allow read: if owner();
     allow create: if owner() && serviceValid(request.resource.data) && request.resource.data.createdAt == request.time;
@@ -45,7 +45,7 @@ service cloud.firestore {
    }
    function assignedProfessional(id){return signed() && get(/databases/$(database)/documents/establishments/$(org)/professionals/$(id)).data.uid == request.auth.uid && get(/databases/$(database)/documents/establishments/$(org)/professionals/$(id)).data.active == true;}
    match /bookingRequests/{id} {
-    allow update: if owner() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && ((resource.data.status == 'pending' && request.resource.data.status in ['confirmed','cancelled']) || (resource.data.status == 'confirmed' && request.resource.data.status in ['completed','cancelled','no_show']));
+    allow update: if (owner() || assignedProfessional(resource.data.professional)) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && ((resource.data.status == 'pending' && request.resource.data.status in ['confirmed','cancelled']) || (resource.data.status == 'confirmed' && request.resource.data.status in ['completed','cancelled','no_show']));
     allow read: if owner() || (signed() && (resource.data.uid == request.auth.uid || assignedProfessional(resource.data.professional)));
     allow create: if signed() && request.resource.data.keys().hasOnly(['uid','email','name','phone','professional','service','date','time','status','createdAt']) && request.resource.data.uid == request.auth.uid && request.resource.data.email == request.auth.token.email && request.resource.data.status == 'pending' && request.resource.data.createdAt == request.time && request.resource.data.name is string && request.resource.data.name.size() <= 100 && request.resource.data.phone is string && request.resource.data.phone.size() <= 20 && exists(/databases/$(database)/documents/publicCatalogs/$(org));
    }
