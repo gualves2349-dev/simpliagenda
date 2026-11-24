@@ -49,7 +49,7 @@ service cloud.firestore {
     allow read: if owner();
     allow create, update: if owner() && request.resource.data.keys().hasOnly(['name']) && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 80;
    }
-   match /bookingLocks/{id} { allow delete: if owner(); allow get: if owner() || (unitAccess(org) && exists(/databases/$(database)/documents/publicCatalogs/$(org))); allow list: if owner(); allow create, update: if owner() || (assignedProfessional(request.resource.data.professional) && id == request.resource.data.professional + '_' + request.resource.data.date && request.resource.data.keys().hasOnly(['professional','date','slots']) && request.resource.data.slots is list); }
+   match /bookingLocks/{id} { allow delete: if owner(); allow get: if (unitAccess(org) && exists(/databases/$(database)/documents/publicCatalogs/$(org))) || owner(); allow list: if owner(); allow create, update: if owner() || (assignedProfessional(request.resource.data.professional) && id == request.resource.data.professional + '_' + request.resource.data.date && request.resource.data.keys().hasOnly(['professional','date','slots']) && request.resource.data.slots is list); }
    match /services/{id}{
     allow read: if owner();
     allow create: if owner() && serviceValid(request.resource.data) && request.resource.data.createdAt == request.time;
@@ -62,7 +62,8 @@ service cloud.firestore {
    }
    match /availability/{id} {
     function assigned(){return unitAccess(org) && signed() && get(/databases/$(database)/documents/establishments/$(org)/professionals/$(id)).data.uid == request.auth.uid && get(/databases/$(database)/documents/establishments/$(org)/professionals/$(id)).data.active == true;}
-    allow read: if owner() || assigned() || (unitAccess(org) && exists(/databases/$(database)/documents/publicCatalogs/$(org)));
+    allow get: if (unitAccess(org) && exists(/databases/$(database)/documents/publicCatalogs/$(org))) || owner() || assigned();
+    allow list: if owner();
     allow create, update: if (owner() || assigned()) && request.resource.data.keys().hasOnly(['week','daysOff']) && request.resource.data.week is list && request.resource.data.week.size() == 7 && request.resource.data.daysOff is list && request.resource.data.daysOff.size() <= 366;
    }
    function assignedProfessional(id){return unitAccess(org) && signed() && get(/databases/$(database)/documents/establishments/$(org)/professionals/$(id)).data.uid == request.auth.uid && get(/databases/$(database)/documents/establishments/$(org)/professionals/$(id)).data.active == true;}
