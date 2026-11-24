@@ -1,8 +1,13 @@
-SIMPLIAGENDA 34–38 — pacote piloto
-GitHub: publique somente index.html, app.js, manifest.webmanifest, sw.js e os dois ícones. Preserve firebase-config.js, style.css e regras da etapa 33.
-34: avisos em sessão aberta, som após interação, histórico em memória.
-35: manifesto e ícones; instalação depende do navegador; sem push em segundo plano.
-36: controle manual existente; cobrança real e webhook não implementados.
-37: bot experimental local, somente número de teste consentido, sem dados pessoais nas mensagens. Não publique a pasta whatsapp-bot no GitHub. API não oficial pode causar bloqueio. Não usar em produção.
-38: revisão estática, não auditoria concluída. Regras ainda não garantem sobreposição integral no servidor; testar permissões, concorrência, cancelamentos e isolamento antes de vender.
-BOT (Windows PowerShell): instale Node.js LTS; abra a pasta whatsapp-bot; npm install; Copy-Item config.example.json config.json; edite config.json com seu número secundário e consentimento. Use credencial Firebase de leitura com menor privilégio possível, guardada fora do repositório. Configure $env:GOOGLE_APPLICATION_CREDENTIALS='D:\segredos\firebase-reader.json'; npm start; escaneie QR em Aparelhos conectados. send:false apenas registra mensagens no console; send:true envia exclusivamente ao número de teste. Reinicie após editar. Eventos existentes no início não são enviados. Não há lembretes, fila durável ou recuperação de eventos durante desligamento. O registro é feito antes do envio para evitar duplicidade; falhas de envio não são repetidas automaticamente. Ctrl+C encerra. Nunca compartilhe credenciais ou pasta de sessão.
+ETAPA 38.6 - PILOTO LOCAL
+Substitua app.js e index.html no GitHub. Nao publique a pasta Windows.
+Encerre o script F8 anterior. Extraia o ZIP, abra PowerShell na pasta Windows e execute:
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Instalar.ps1
+Teste isolado:
+Start-Process 'simpliagenda://send/teste_manual_01?text=Teste%20SimpliAgenda%20386'
+Abra WhatsApp Desktop antes. Nao mexa no teclado/mouse durante o envio.
+No perfil barbeiro ou gestor, na area de WhatsApp da agenda, marque automacao local e teste conexao.
+Confirme um novo agendamento. O navegador pode pedir permissao para abrir o protocolo.
+O destinatario e fixo no script (numero proprio informado). O link manual continua disponivel.
+O registro .attempt evita repetir o mesmo ID; nao confirma entrega. Se o envio falhar, use o link manual apos verificar a conversa.
+Qualquer site pode tentar invocar protocolos locais: use somente neste piloto e desinstale depois. O script nao valida a origem nem o destinatario visivel na janela; nao use com conversas reais abertas. O foco pode falhar. Nao ha envio em segundo plano.
+Para remover: powershell -NoProfile -ExecutionPolicy Bypass -File .\Desinstalar.ps1
