@@ -2,6 +2,12 @@ rules_version = '2';
 service cloud.firestore {
  match /databases/{database}/documents {
   function signed(){return request.auth != null;}
+  function platformAdmin(){return signed() && exists(/databases/$(database)/documents/platformAdmins/$(request.auth.uid));}
+  match /platformAdmins/{uid} { allow get: if signed() && request.auth.uid == uid; }
+  match /platformSubscriptions/{org} {
+   allow read: if platformAdmin();
+   allow create, update: if platformAdmin() && exists(/databases/$(database)/documents/establishments/$(org)) && request.resource.data.keys().hasOnly(['status','until','monthlyCents','updatedAt']) && request.resource.data.status in ['trial','active','blocked','inactive'] && request.resource.data.until is string && request.resource.data.until.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}') && request.resource.data.monthlyCents is int && request.resource.data.monthlyCents >= 0 && request.resource.data.monthlyCents <= 10000000 && request.resource.data.updatedAt == request.time;
+  }
   match /publicCatalogs/{org} {
    allow read: if true;
    allow create, update: if signed() && get(/databases/$(database)/documents/establishments/$(org)).data.ownerUid == request.auth.uid;
@@ -12,7 +18,7 @@ service cloud.firestore {
    allow delete: if signed() && get(/databases/$(database)/documents/establishments/$(resource.data.org)).data.ownerUid == request.auth.uid;
   }
   match /establishments/{org} {
-   allow read: if signed() && resource.data.ownerUid == request.auth.uid;
+   allow read: if platformAdmin() || (signed() && resource.data.ownerUid == request.auth.uid);
    allow create: if signed() && request.resource.data.keys().hasOnly(['name','segment','ownerUid','createdAt']) && request.resource.data.ownerUid == request.auth.uid && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 && request.resource.data.segment is string && request.resource.data.createdAt == request.time;
    function owner(){return signed() && get(/databases/$(database)/documents/establishments/$(org)).data.ownerUid == request.auth.uid;}
    allow update: if owner() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','segment','brand']) && (!('brand' in request.resource.data) || validBrand(request.resource.data.brand)) && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 && request.resource.data.segment is string;
