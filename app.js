@@ -240,7 +240,7 @@ function inlineBookingActions324(a){const buttons=[...a.children].filter(n=>n.ta
 function auto386Key(){return 'simpliagenda-auto386-'+role25+'-'+(auth.currentUser?.uid||'none');}
 function auto386Enabled(){return !!auth.currentUser&&localStorage.getItem(auto386Key())!=='0';}
 function auto386Uri(id,msg){return 'simpliagenda://send/'+encodeURIComponent(id)+'?text='+encodeURIComponent(msg).replace(/[!'()*]/g,c=>'%'+c.charCodeAt(0).toString(16).toUpperCase());}
-for(const id of ['managerWaLink','staffWaLink']){const root=$(id);if(!root)continue;const box=document.createElement('div'),label=document.createElement('label'),check=document.createElement('input'),test=document.createElement('button');check.type='checkbox';label.append(check,document.createTextNode(' Automação WhatsApp Desktop — somente meu número de teste'));test.type='button';test.textContent='Testar conexão Windows';box.append(label,test);root.before(box);check.addEventListener('change',()=>{if(!auth.currentUser){check.checked=false;return;}localStorage.setItem(auto386Key(),check.checked?'1':'0');});test.onclick=()=>{if(!auto386Enabled()){alert('Ative a automação de teste primeiro.');return;}location.href=auto386Uri('test_'+Date.now(),'SimpliAgenda - teste de integração Windows');};onAuthStateChanged(auth,()=>{check.checked=auto386Enabled();});}
+
 
 // Local pilot: no delivery receipt. Only the fixed self-test recipient in Windows.
 const seen387=new Map();let active387=null;
