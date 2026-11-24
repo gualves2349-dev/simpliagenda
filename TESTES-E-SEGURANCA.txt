@@ -1,0 +1,16 @@
+SIMPLIAGENDA 39.14 — piloto financeiro
+Publicar index.html e app.js. Manter regras 39.5 e AHK já corrigido.
+39.8: financeiro por período e CSV; valores são registros manuais.
+39.9: vencimentos em até 7 dias e unidades sem acesso (não equivalem a dívida).
+39.10: copiar aviso de renovação manualmente. Não dispara para terceiros.
+39.11/12: pendentes. Para operação independente, usar serviço autenticado com fila persistente, destinatário autorizado e confirmação verificável. Não publicar credenciais Admin SDK nem liberar protocolo AHK para números arbitrários. O protocolo atual não autentica origem nem verifica conversa; manter apenas em ambiente de teste e desinstalar após uso.
+39.13: revisão estática parcial: regras 39.5 restringem pagamentos e configurações ao platformAdmin; presença de documento platformAdmins concede privilégio, revisar todos os UIDs. Testar regras no emulador antes de produção. Não considerar auditoria concluída.
+39.14: roteiro de aceitação (executar em projeto de teste):
+1. Superadmin configura PIX e preços; gestor comum tenta alterar e deve receber negação.
+2. Novo gestor cria unidade; verificar trial de 7 dias e isolamento de outra unidade.
+3. Cliente agenda; barbeiro confirma; testar apenas número próprio autorizado.
+4. Registrar PIX fictício no ambiente de teste; conferir extensão e histórico; repetir referência e verificar recusa.
+5. Conferir filtro financeiro e CSV com os registros; cortesia deve somar zero.
+6. Vencer/bloquear licença; verificar acesso de gestor, profissional e cliente; renovar e conferir retorno.
+7. Testar acesso cruzado por UID, alteração direta de reservas e locks, concorrência, logout e mobile.
+8. Não liberar produção enquanto houver falhas, automação sem validação ou regras não testadas.
