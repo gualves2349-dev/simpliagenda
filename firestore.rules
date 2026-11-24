@@ -44,6 +44,10 @@ service cloud.firestore {
     allow create, update: if (owner() || assigned()) && request.resource.data.keys().hasOnly(['week','daysOff']) && request.resource.data.week is list && request.resource.data.week.size() == 7 && request.resource.data.daysOff is list && request.resource.data.daysOff.size() <= 366;
    }
    function assignedProfessional(id){return signed() && get(/databases/$(database)/documents/establishments/$(org)/professionals/$(id)).data.uid == request.auth.uid && get(/databases/$(database)/documents/establishments/$(org)/professionals/$(id)).data.active == true;}
+   match /notificationPreferences/{id} {
+    allow read: if owner() || assignedProfessional(id);
+    allow create, update: if (owner() || assignedProfessional(id)) && request.resource.data.keys().hasOnly(['phone','test','newRequests','tomorrow','tomorrowTime','today','todayTime','end','endTime','individual','minutes']) && request.resource.data.phone is string && request.resource.data.phone.matches('55[0-9]{10,11}') && request.resource.data.test is bool && request.resource.data.newRequests is bool && request.resource.data.tomorrow is bool && request.resource.data.today is bool && request.resource.data.end is bool && request.resource.data.individual is bool && request.resource.data.tomorrowTime.matches('[0-2][0-9]:[0-5][0-9]') && request.resource.data.todayTime.matches('[0-2][0-9]:[0-5][0-9]') && request.resource.data.endTime.matches('[0-2][0-9]:[0-5][0-9]') && request.resource.data.minutes is int && request.resource.data.minutes >= 5 && request.resource.data.minutes <= 1440;
+   }
    match /bookingRequests/{id} {
     allow update: if (owner() || assignedProfessional(resource.data.professional)) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && ((resource.data.status == 'pending' && request.resource.data.status in ['confirmed','cancelled']) || (resource.data.status == 'confirmed' && request.resource.data.status in ['completed','cancelled','no_show']));
     allow read: if owner() || (signed() && (resource.data.uid == request.auth.uid || assignedProfessional(resource.data.professional)));
