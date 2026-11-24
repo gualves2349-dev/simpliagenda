@@ -23,6 +23,10 @@ service cloud.firestore {
     allow read: if owner();
     allow create, update: if owner() && id == 'campaign' && request.resource.data.keys().hasOnly(['name','goal','active']) && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 && request.resource.data.goal is int && request.resource.data.goal >= 1 && request.resource.data.goal <= 100 && request.resource.data.active is bool;
    }
+   match /rewardBalances/{uid} {
+    allow read: if owner() || (signed() && request.auth.uid == uid);
+    allow create, update: if owner() && request.resource.data.keys().hasOnly(['used','lastReward','updatedAt']) && request.resource.data.used is int && request.resource.data.used > 0 && request.resource.data.lastReward is string && request.resource.data.lastReward.size() <= 100 && request.resource.data.updatedAt == request.time && (!exists(/databases/$(database)/documents/establishments/$(org)/rewardBalances/$(uid)) || request.resource.data.used > resource.data.used);
+   }
    match /customers/{id} {
     allow read: if owner();
     allow create, update: if owner() && request.resource.data.keys().hasOnly(['name','email','phone']) && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 && request.resource.data.email is string && request.resource.data.email.size() <= 254 && request.resource.data.phone is string && request.resource.data.phone.size() <= 20;
