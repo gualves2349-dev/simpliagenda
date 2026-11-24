@@ -49,7 +49,17 @@ service cloud.firestore {
     allow read: if owner();
     allow create, update: if owner() && request.resource.data.keys().hasOnly(['name']) && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 80;
    }
-   match /bookingLocks/{id} { allow delete: if owner(); allow get: if (unitAccess(org) && exists(/databases/$(database)/documents/publicCatalogs/$(org))) || owner(); allow list: if owner(); allow create, update: if owner() || (assignedProfessional(request.resource.data.professional) && id == request.resource.data.professional + '_' + request.resource.data.date && request.resource.data.keys().hasOnly(['professional','date','slots']) && request.resource.data.slots is list); }
+   match /bookingLocks/{id} {
+    function customerAppend(oldSlots) {
+     let d = request.resource.data;
+     let slot = d.slots[d.slots.size()-1];
+     let path = /databases/$(database)/documents/establishments/$(org)/bookingRequests/$(slot.id);
+     let booking = getAfter(path).data;
+     return signed() && unitAccess(org) && d.keys().hasOnly(['professional','date','slots']) && d.slots is list && d.slots.size() == oldSlots.size()+1 && d.slots == oldSlots + [slot] && slot.keys().hasOnly(['id','start','end']) && slot.start is int && slot.end is int && slot.start >= 0 && slot.end <= 1440 && slot.end > slot.start && !exists(path) && booking.uid == request.auth.uid && booking.status == 'pending' && booking.professional == d.professional && booking.date == d.date && id == d.professional+'_'+d.date;
+    }
+    allow create: if customerAppend([]);
+    allow update: if customerAppend(resource.data.slots);
+ allow delete: if owner(); allow get: if (unitAccess(org) && exists(/databases/$(database)/documents/publicCatalogs/$(org))) || owner(); allow list: if owner(); allow create, update: if owner() || (assignedProfessional(request.resource.data.professional) && id == request.resource.data.professional + '_' + request.resource.data.date && request.resource.data.keys().hasOnly(['professional','date','slots']) && request.resource.data.slots is list); }
    match /services/{id}{
     allow read: if owner();
     allow create: if owner() && serviceValid(request.resource.data) && request.resource.data.createdAt == request.time;
@@ -99,7 +109,11 @@ service cloud.firestore {
       && d.phone is string && d.phone.size() <= 20
       && exists(/databases/$(database)/documents/publicCatalogs/$(org));
     }
-    allow create: if unitAccess(org) && signed() && validBooking(request.resource.data);
+    function hasReservation(d) {
+     let lock = getAfter(/databases/$(database)/documents/establishments/$(org)/bookingLocks/$(d.professional+'_'+d.date)).data;
+     return lock.slots.size() > 0 && lock.slots[lock.slots.size()-1].id == id;
+    }
+    allow create: if unitAccess(org) && signed() && validBooking(request.resource.data) && hasReservation(request.resource.data);
    }
    match /feedback/{id} { allow delete: if owner();
     function bookingData(){return get(/databases/$(database)/documents/establishments/$(org)/bookingRequests/$(id)).data;}
