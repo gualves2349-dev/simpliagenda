@@ -1,1 +1,10 @@
-Piloto 387: substituir index.html e app.js. Manter o AHK corrigido e instalado anteriormente. Automacao ligada por padrao, preferencia persistente local. Somente numero fixo de teste. Eventos novos observados com perfil gestor/barbeiro aberto e visivel; lembretes janela de 10 minutos. Navegador pode bloquear protocolo sem gesto. Historico local indica solicitacao ao Windows, nao entrega. Nao reenvia automaticamente tentativas. Nao usar com clientes reais. Desativar ao terminar. Sem alteracoes Firebase. Sem processamento com navegador fechado. Chrome/Edge com Web Locks necessario.
+SimpliAgenda 39.5 — piloto comercial
+1. Publique firestore.rules no Firebase (projeto simpliagenda-ff92d). Faça backup das regras atuais.
+2. Substitua index.html, app.js e apresentacao.html no GitHub. Preserve os demais arquivos e o AutoHotkey já corrigido.
+3. Entre com a conta superadmin existente em index.html?acesso=admin. O documento platformAdmins/UID deve existir, criado manualmente pelo proprietário no console Firebase.
+4. Em Configuração PIX e planos, informe chave pública, WhatsApp com DDI e preços em centavos (2990 e 29900 são sugestões). Prefira chave aleatória ou comercial: estes dados são públicos.
+5. Teste cadastro novo em apresentacao.html. Uma unidade por conta autocadastrada, 7 dias de teste. Contas antigas mantêm comportamento anterior.
+6. Em Configurações da unidade ou tela de licença vencida, copie PIX e abra WhatsApp para enviar comprovante manualmente. Confira crédito bancário antes de liberar.
+7. No superadmin, escolha unidade, Pagamento PIX / histórico, plano e referência única. A transação grava pagamento e licença. Mensal 30 dias, anual 365 dias; cortesia 30 dias. Renovação soma ao vencimento futuro ou à data atual. Atualize a página do gestor após liberar.
+8. Automação WhatsApp anterior preservada, limitada à unidade piloto Barber Culture. Não reinstale AHK. Não há confirmação de entrega, serviço independente, nem validação de destinatário. Não usar com clientes reais.
+Testes pendentes: compilação das regras, cadastro e pagamento com contas reais, vencimento, isolamento e segurança. Sem integração bancária. Cadastro pode ser abusado com múltiplos e-mails; antes do lançamento implementar verificação e controle de abuso.
