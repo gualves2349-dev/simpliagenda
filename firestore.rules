@@ -99,9 +99,8 @@ service cloud.firestore {
      let slot = resource.data.slots[d.releasedIndex];
      return signed() && unitAccess(org) && d.keys().hasOnly(['professional','date','slots','releasedBooking','releasedIndex']) && d.releasedIndex is int && d.releasedIndex >= 0 && d.releasedIndex < resource.data.slots.size() && old.uid == request.auth.uid && old.status == 'confirmed' && after.status == 'cancelled' && old.professional == d.professional && old.date == d.date && d.professional == resource.data.professional && d.date == resource.data.date && id == d.professional+'_'+d.date && slot.id == d.releasedBooking && d.slots == resource.data.slots.removeAll([slot]);
     }
-    allow update: if customerRelease();
     allow create: if customerAppend([]);
-    allow update: if customerAppend(resource.data.slots);
+    allow update: if ('releasedBooking' in request.resource.data && 'releasedIndex' in request.resource.data) ? customerRelease() : (request.resource.data.professional == resource.data.professional && request.resource.data.date == resource.data.date && customerAppend(resource.data.slots));
  allow delete: if owner(); allow get: if (unitAccess(org) && exists(/databases/$(database)/documents/publicCatalogs/$(org))) || owner(); allow list: if owner(); allow create, update: if owner() || (assignedProfessional(request.resource.data.professional) && id == request.resource.data.professional + '_' + request.resource.data.date && request.resource.data.keys().hasOnly(['professional','date','slots','releasedBooking','releasedIndex']) && request.resource.data.slots is list); }
    match /services/{id}{
     allow read: if owner();
