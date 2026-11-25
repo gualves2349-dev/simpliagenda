@@ -8,3 +8,4 @@ self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('a
 // Release 44.30: network-first browser defaults; no application data cache.
 
 // Release 44.40
+// Release 44.50
