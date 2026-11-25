@@ -117,6 +117,38 @@ service cloud.firestore {
     allow read: if owner() || assignedProfessional(id);
     allow create, update: if (owner() || assignedProfessional(id)) && request.resource.data.keys().hasOnly(['phone','test','newRequests','tomorrow','tomorrowTime','today','todayTime','end','endTime','individual','minutes']) && request.resource.data.phone is string && request.resource.data.phone.matches('55[0-9]{10,11}') && request.resource.data.test is bool && request.resource.data.newRequests is bool && request.resource.data.tomorrow is bool && request.resource.data.today is bool && request.resource.data.end is bool && request.resource.data.individual is bool && request.resource.data.tomorrowTime.matches('[0-2][0-9]:[0-5][0-9]') && request.resource.data.todayTime.matches('[0-2][0-9]:[0-5][0-9]') && request.resource.data.endTime.matches('[0-2][0-9]:[0-5][0-9]') && request.resource.data.minutes is int && request.resource.data.minutes >= 5 && request.resource.data.minutes <= 1440;
    }
+   match /policies/{id} {
+    allow read: if owner();
+    allow create, update: if owner() && id == 'cancellation' && request.resource.data.keys().hasOnly(['text']) && request.resource.data.text is string && request.resource.data.text.size() <= 1000;
+   }
+   match /commissionRates/{professional} {
+    allow read: if owner() || assignedProfessional(professional);
+    allow create, update: if owner() && exists(/databases/$(database)/documents/establishments/$(org)/professionals/$(professional)) && request.resource.data.keys().hasOnly(['basisPoints','updatedAt']) && request.resource.data.basisPoints is int && request.resource.data.basisPoints >= 0 && request.resource.data.basisPoints <= 10000 && request.resource.data.updatedAt == request.time;
+   }
+   match /commissionEntries/{bookingId} {
+    function validEntry() {
+     let path = /databases/$(database)/documents/establishments/$(org)/bookingRequests/$(bookingId);
+     let b = get(path).data;
+     let d = request.resource.data;
+     let pro = b.professional;
+     let ratePath = /databases/$(database)/documents/establishments/$(org)/commissionRates/$(pro);
+     let rate = exists(ratePath) ? get(ratePath).data.basisPoints : 0;
+     let gross = 'priceCents' in b ? b.priceCents : 0;
+     return (owner() || assignedProfessional(pro)) && b.status == 'confirmed' && getAfter(path).data.status == 'completed' && d.keys().hasOnly(['professional','basisPoints','amount','createdAt']) && d.professional == pro && d.basisPoints == rate && d.amount is int && d.amount >= 0 && d.amount * 10000 <= gross * rate && (d.amount + 1) * 10000 > gross * rate && d.createdAt == request.time;
+    }
+    allow read: if owner() || assignedProfessional(resource.data.professional);
+    allow create: if validEntry();
+   }
+   match /commissionPayments/{bookingId} {
+    function validPayment() {
+     let b = get(/databases/$(database)/documents/establishments/$(org)/bookingRequests/$(bookingId)).data;
+     let d = request.resource.data;
+     let entry = get(/databases/$(database)/documents/establishments/$(org)/commissionEntries/$(bookingId)).data;
+     return b.status == 'completed' && d.keys().hasOnly(['amount','professional','paidAt','actor']) && d.amount == entry.amount && d.amount > 0 && d.professional == b.professional && d.paidAt == request.time && d.actor == request.auth.uid;
+    }
+    allow read: if owner() || assignedProfessional(resource.data.professional);
+    allow create: if owner() && validPayment();
+   }
    match /bookingRequests/{id} { allow delete: if owner();
     function validBookingPrice(serviceId, price) {
      let serviceDoc = get(/databases/$(database)/documents/establishments/$(org)/services/$(serviceId));
@@ -126,7 +158,12 @@ service cloud.firestore {
      let d = request.resource.data;
      return d.diff(resource.data).affectedKeys().hasOnly(['status','cancelReason','cancelledBy','cancelledAt']) && d.status == 'cancelled' && d.cancelReason is string && d.cancelReason.size() <= 500 && d.cancelReason.matches('.*[^\\s].*') && d.cancelledBy == request.auth.uid && d.cancelledAt == request.time;
     }
-    allow update: if (owner() || assignedProfessional(resource.data.professional)) && ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && ((resource.data.status == 'pending' && request.resource.data.status == 'confirmed') || (resource.data.status == 'confirmed' && request.resource.data.status in ['completed','no_show']))) || (resource.data.status in ['pending','confirmed'] && validCancellation()));
+    function validCompletion() {
+     let entry = /databases/$(database)/documents/establishments/$(org)/commissionEntries/$(id);
+     return resource.data.status == 'confirmed' && request.resource.data.status == 'completed' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && !exists(entry) && existsAfter(entry);
+    }
+    allow update: if (owner() || assignedProfessional(resource.data.professional)) && validCompletion();
+    allow update: if (owner() || assignedProfessional(resource.data.professional)) && ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && ((resource.data.status == 'pending' && request.resource.data.status == 'confirmed') || (resource.data.status == 'confirmed' && request.resource.data.status == 'no_show'))) || (resource.data.status in ['pending','confirmed'] && validCancellation()));
     allow update: if signed() && unitAccess(org) && resource.data.uid == request.auth.uid && resource.data.status == 'confirmed' && validCancellation();
     allow read: if owner() || (unitAccess(org) && signed() && (resource.data.uid == request.auth.uid || assignedProfessional(resource.data.professional)));
     function validProfessional(proId, serviceId) {
