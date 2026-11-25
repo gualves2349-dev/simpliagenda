@@ -6,3 +6,5 @@ firebase.messaging().onBackgroundMessage(p=>self.registration.showNotification(p
 self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('fetch',()=>{});
 
 // Release 44.30: network-first browser defaults; no application data cache.
+
+// Release 44.40
