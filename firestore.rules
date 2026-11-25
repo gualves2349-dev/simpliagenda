@@ -75,7 +75,7 @@ service cloud.firestore {
      let path = /databases/$(database)/documents/establishments/$(org)/bookingRequests/$(auditBookingId);
      let before = get(path).data;
      let after = getAfter(path).data;
-     return (owner() || assignedProfessional(before.professional)) && before.status == d.from && after.status == d.to && d.from != d.to;
+     return (owner() || assignedProfessional(before.professional) || (before.uid == request.auth.uid && before.status in ['pending','confirmed'] && after.status == 'cancelled')) && before.status == d.from && after.status == d.to && d.from != d.to;
     }
    }
    match /bookingLocks/{id} {
@@ -102,7 +102,7 @@ service cloud.firestore {
      let old = get(path).data;
      let after = getAfter(path).data;
      let slot = resource.data.slots[d.releasedIndex];
-     return signed() && unitAccess(org) && d.keys().hasOnly(['professional','date','slots','releasedBooking','releasedIndex']) && d.releasedIndex is int && d.releasedIndex >= 0 && d.releasedIndex < resource.data.slots.size() && old.uid == request.auth.uid && old.status == 'confirmed' && after.status == 'cancelled' && old.professional == d.professional && old.date == d.date && d.professional == resource.data.professional && d.date == resource.data.date && id == d.professional+'_'+d.date && slot.id == d.releasedBooking && d.slots == resource.data.slots.removeAll([slot]);
+     return signed() && unitAccess(org) && d.keys().hasOnly(['professional','date','slots','releasedBooking','releasedIndex']) && d.releasedIndex is int && d.releasedIndex >= 0 && d.releasedIndex < resource.data.slots.size() && old.uid == request.auth.uid && old.status in ['pending','confirmed'] && after.status == 'cancelled' && old.professional == d.professional && old.date == d.date && d.professional == resource.data.professional && d.date == resource.data.date && id == d.professional+'_'+d.date && slot.id == d.releasedBooking && d.slots == resource.data.slots.removeAll([slot]);
     }
     allow create: if customerAppend([]);
     allow update: if ('releasedBooking' in request.resource.data && 'releasedIndex' in request.resource.data) ? customerRelease() : (request.resource.data.professional == resource.data.professional && request.resource.data.date == resource.data.date && customerAppend(resource.data.slots));
@@ -175,7 +175,12 @@ service cloud.firestore {
     }
     allow update: if (owner() || assignedProfessional(resource.data.professional)) && validCompletion();
     allow update: if (owner() || assignedProfessional(resource.data.professional)) && ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && ((resource.data.status == 'pending' && request.resource.data.status == 'confirmed') || (resource.data.status == 'confirmed' && request.resource.data.status == 'no_show'))) || (resource.data.status in ['pending','confirmed'] && validCancellation()));
-    allow update: if signed() && unitAccess(org) && resource.data.uid == request.auth.uid && resource.data.status == 'confirmed' && validCancellation();
+    allow update: if signed() && unitAccess(org) && resource.data.uid == request.auth.uid && resource.data.status in ['pending','confirmed'] && validCancellation() && releasedCustomerSlot();
+    function releasedCustomerSlot() {
+     let lockId = resource.data.professional + '_' + resource.data.date;
+     let path = /databases/$(database)/documents/establishments/$(org)/bookingLocks/$(lockId);
+     return !exists(path) || (existsAfter(path) && getAfter(path).data.releasedBooking == id && getAfter(path).data.slots.size() == get(path).data.slots.size()-1);
+    }
     allow read: if owner() || (unitAccess(org) && signed() && (resource.data.uid == request.auth.uid || assignedProfessional(resource.data.professional)));
     function validProfessional(proId, serviceId) {
      let pro = get(/databases/$(database)/documents/establishments/$(org)/professionals/$(proId));
