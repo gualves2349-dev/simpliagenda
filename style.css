@@ -13,3 +13,9 @@ body:has(#superPanel:not([hidden])) main{max-width:1440px} #superPanel #superMet
 
 /* 45.3 — links e verificação */
 .links453 input[readonly]{width:100%;box-sizing:border-box;color:#d8dce3;background:#12161c;cursor:text}.links453 label{display:block;margin-top:12px}.links453 button{margin:6px 0 12px}#verify453{border:1px solid #76643d;border-radius:12px;padding:14px;margin-top:14px}#verify453 button{margin:4px}#branchNotice45{padding:12px;color:#d6b45b;font-size:.9rem}
+
+/* 45.3.2: foto do profissional no agendamento */
+#bookingForm #bookingAvatar{display:flex;justify-content:center;align-items:center;margin:8px 0 16px;}
+#bookingForm #bookingAvatar:empty{display:none;}
+#bookingForm #bookingAvatar .avatar{float:none;width:120px;height:120px;max-width:100%;box-sizing:border-box;border:2px solid #d6b45b;border-radius:50%;object-fit:cover;margin:0;}
+#bookingForm #bookingAvatar .initials{background:#23272e;color:#d6b45b;font-size:32px;}
