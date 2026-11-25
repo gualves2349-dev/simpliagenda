@@ -19,3 +19,6 @@ body:has(#superPanel:not([hidden])) main{max-width:1440px} #superPanel #superMet
 #bookingForm #bookingAvatar:empty{display:none;}
 #bookingForm #bookingAvatar .avatar{float:none;width:120px;height:120px;max-width:100%;box-sizing:border-box;border:2px solid #d6b45b;border-radius:50%;object-fit:cover;margin:0;}
 #bookingForm #bookingAvatar .initials{background:#23272e;color:#d6b45b;font-size:32px;}
+
+/* 45.15 */
+.report-table{overflow-x:auto;max-width:100%}.report-table th,.report-table td{white-space:nowrap}#auditList4515{overflow-wrap:anywhere;max-height:24rem;overflow:auto}#customerList article{overflow-wrap:anywhere}#crmFilter4515{max-width:100%}button:disabled{cursor:not-allowed;opacity:.65}@media(max-width:600px){.actions{flex-wrap:wrap}.actions button{max-width:100%;white-space:normal}#bookingForm select{width:100%;min-width:0}}

@@ -58,13 +58,29 @@ service cloud.firestore {
     allow read: if owner();
     allow create, update: if owner() && request.resource.data.keys().hasOnly(['name']) && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 80;
    }
+   match /auditEvents/{event} {
+    allow read: if owner();
+    allow create: if signed() && unitAccess(org) && request.resource.data.keys().hasOnly(['bookingId','from','to','actor','createdAt']) && request.resource.data.actor == request.auth.uid && request.resource.data.createdAt == request.time && validAudit(request.resource.data);
+    function validAudit(d) {
+     let path = /databases/$(database)/documents/establishments/$(org)/bookingRequests/$(d.bookingId);
+     let before = get(path).data;
+     let after = getAfter(path).data;
+     return (owner() || assignedProfessional(before.professional)) && before.status == d.from && after.status == d.to && d.from != d.to;
+    }
+   }
    match /bookingLocks/{id} {
+    function clearAt(oldSlots, slot, i) {
+     return oldSlots.size() <= i || slot.end <= oldSlots[i].start || slot.start >= oldSlots[i].end;
+    }
+    function noOverlap(oldSlots, slot) {
+     return oldSlots.size() < 48 && clearAt(oldSlots, slot, 0) && clearAt(oldSlots, slot, 1) && clearAt(oldSlots, slot, 2) && clearAt(oldSlots, slot, 3) && clearAt(oldSlots, slot, 4) && clearAt(oldSlots, slot, 5) && clearAt(oldSlots, slot, 6) && clearAt(oldSlots, slot, 7) && clearAt(oldSlots, slot, 8) && clearAt(oldSlots, slot, 9) && clearAt(oldSlots, slot, 10) && clearAt(oldSlots, slot, 11) && clearAt(oldSlots, slot, 12) && clearAt(oldSlots, slot, 13) && clearAt(oldSlots, slot, 14) && clearAt(oldSlots, slot, 15) && clearAt(oldSlots, slot, 16) && clearAt(oldSlots, slot, 17) && clearAt(oldSlots, slot, 18) && clearAt(oldSlots, slot, 19) && clearAt(oldSlots, slot, 20) && clearAt(oldSlots, slot, 21) && clearAt(oldSlots, slot, 22) && clearAt(oldSlots, slot, 23) && clearAt(oldSlots, slot, 24) && clearAt(oldSlots, slot, 25) && clearAt(oldSlots, slot, 26) && clearAt(oldSlots, slot, 27) && clearAt(oldSlots, slot, 28) && clearAt(oldSlots, slot, 29) && clearAt(oldSlots, slot, 30) && clearAt(oldSlots, slot, 31) && clearAt(oldSlots, slot, 32) && clearAt(oldSlots, slot, 33) && clearAt(oldSlots, slot, 34) && clearAt(oldSlots, slot, 35) && clearAt(oldSlots, slot, 36) && clearAt(oldSlots, slot, 37) && clearAt(oldSlots, slot, 38) && clearAt(oldSlots, slot, 39) && clearAt(oldSlots, slot, 40) && clearAt(oldSlots, slot, 41) && clearAt(oldSlots, slot, 42) && clearAt(oldSlots, slot, 43) && clearAt(oldSlots, slot, 44) && clearAt(oldSlots, slot, 45) && clearAt(oldSlots, slot, 46) && clearAt(oldSlots, slot, 47);
+    }
     function customerAppend(oldSlots) {
      let d = request.resource.data;
      let slot = d.slots[d.slots.size()-1];
      let path = /databases/$(database)/documents/establishments/$(org)/bookingRequests/$(slot.id);
      let booking = getAfter(path).data;
-     return signed() && unitAccess(org) && d.keys().hasOnly(['professional','date','slots']) && d.slots is list && d.slots.size() == oldSlots.size()+1 && d.slots == oldSlots.concat([slot]) && slot.keys().hasOnly(['id','start','end']) && slot.start is int && slot.end is int && slot.start >= 0 && slot.end <= 1440 && slot.end > slot.start && !exists(path) && booking.uid == request.auth.uid && booking.status == 'pending' && booking.professional == d.professional && booking.date == d.date && id == d.professional+'_'+d.date;
+     return signed() && unitAccess(org) && d.keys().hasOnly(['professional','date','slots']) && d.slots is list && d.slots.size() == oldSlots.size()+1 && d.slots == oldSlots.concat([slot]) && slot.keys().hasOnly(['id','start','end']) && slot.start is int && slot.end is int && slot.start >= 0 && slot.end <= 1440 && slot.end > slot.start && noOverlap(oldSlots, slot) && slot.start == int(booking.time.split(':')[0])*60 + int(booking.time.split(':')[1]) && slot.end == slot.start + get(/databases/$(database)/documents/establishments/$(org)/services/$(booking.service)).data.duration && !exists(path) && booking.uid == request.auth.uid && booking.status == 'pending' && booking.professional == d.professional && booking.date == d.date && id == d.professional+'_'+d.date;
     }
     function customerRelease() {
      let d = request.resource.data;
