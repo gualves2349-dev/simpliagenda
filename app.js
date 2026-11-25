@@ -1,5 +1,5 @@
 const diag=()=>{}, diagError=()=>{};
-import {setupPush} from './push-client.js?v=4420';
+import {setupPush} from './push-client.js?v=4423';
 import {getFunctions,httpsCallable} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-functions.js';
 import {initializeApp,deleteApp} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import {app as baseApp} from './firebase-config.js';
@@ -27,7 +27,7 @@ $('auth').onsubmit=e=>{e.preventDefault();run(async()=>{await sessionReady40;if(
 $('reset').onclick=()=>run(async()=>{await sendPasswordResetEmail(auth,loginEmail4515());$('status').textContent='Se a conta existir, confira seu e-mail.'});
 let loggingOut24=false;
 function guestScreen24(){clearAlerts38();$('alertBell38').hidden=true;if($('alertDialog38').open)$('alertDialog38').close();document.body.dataset.session='guest';for(const id of ['panel','staffPanel','superPanel','customerPanel','customerLogout','managerHeader','headerMenus','headerAccount','profileHeader32'])$(id).hidden=true;for(const id of ['headerMenus','headerAccount','myBookings'])$(id).replaceChildren();$('profileName32').textContent='';$('profileUnit32').textContent='';delete $('headerMenus').dataset.source;delete $('headerAccount').dataset.show;$('login').hidden=false;}
-async function logout24(){if(loggingOut24)return;if(role25==='customer'&&removePush44){try{await removePush44();}catch(e){$('status').textContent='Não foi possível desativar as notificações: '+e.message;return;}}loggingOut24=true;++generation;guestScreen24();try{await signOut(auth);location.replace(location.href);}catch(e){loggingOut24=false;await routeAuth24(auth.currentUser);throw e;}}
+async function logout24(){if(loggingOut24)return;loggingOut24=true;if(role25==='customer'&&removePush44){try{await removePush44();}catch(e){console.warn('Falha ao desvincular notificações',e);if(!confirm('Não foi possível desvincular as notificações deste dispositivo. Se sair agora, ele poderá continuar recebendo avisos desta conta. Deseja sair mesmo assim?')){loggingOut24=false;return;}}}++generation;guestScreen24();try{await signOut(auth);location.replace(location.href);}catch(e){loggingOut24=false;await routeAuth24(auth.currentUser);throw e;}}
 $('logout').onclick=()=>run(logout24);
 let categories=[],units=[],current=null,pros=[],services=[],generation=0;
 let financeRequest4530=0;
