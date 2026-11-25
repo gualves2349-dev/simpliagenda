@@ -1,0 +1,1 @@
+{"name":"simpliagenda-push-local","version":"44.20.0","private":true,"scripts":{"start":"node server.cjs"},"dependencies":{"firebase-admin":"^13.0.0"},"engines":{"node":">=20"}}

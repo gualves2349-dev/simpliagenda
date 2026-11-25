@@ -8,6 +8,11 @@ service cloud.firestore {
    let path = /databases/$(database)/documents/platformSubscriptions/$(org);
    return exists(path) ? (get(path).data.status in ['active','trial'] && 'expiresAt' in get(path).data && request.time < get(path).data.expiresAt) : (request.time < get(/databases/$(database)/documents/establishments/$(org)).data.createdAt + duration.value(7,'d'));
   }
+  match /pushTemplates/{id} {
+   allow read, delete: if platformAdmin();
+   allow create, update: if platformAdmin() && (id == 'global' || id.matches('org_.+')) && request.resource.data.keys().hasOnly(['title','body']) && request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 100 && request.resource.data.body is string && request.resource.data.body.size() > 0 && request.resource.data.body.size() <= 300;
+  }
+  match /pushMonitor/{id} { allow read: if platformAdmin(); }
   match /customerAccounts/{uid} { allow get: if signed() && request.auth.uid == uid; allow create: if authenticated() && !exists(/databases/$(database)/documents/platformAdmins/$(request.auth.uid)) && request.auth.uid == uid && request.resource.data.keys().hasOnly(['role']) && request.resource.data.role == 'customer'; }
   match /customerAccounts/{uid}/pushDevices/{device} {
    allow get, list, delete: if signed() && request.auth.uid == uid;
