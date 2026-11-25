@@ -159,7 +159,7 @@ service cloud.firestore {
    }
    match /feedback/{id} { allow delete: if owner();
     function bookingData(){return get(/databases/$(database)/documents/establishments/$(org)/bookingRequests/$(id)).data;}
-    allow get: if owner() || (unitAccess(org) && signed() && bookingData().uid == request.auth.uid);
+    allow get: if owner() || (unitAccess(org) && signed() && (bookingData().uid == request.auth.uid || assignedProfessional(bookingData().professional)));
     allow list: if owner();
     allow create: if unitAccess(org) && signed() && bookingData().uid == request.auth.uid && bookingData().status == 'completed' && request.resource.data.keys().hasOnly(['uid','score','comment','createdAt']) && request.resource.data.uid == request.auth.uid && request.resource.data.score is int && request.resource.data.score >= 1 && request.resource.data.score <= 5 && request.resource.data.comment is string && request.resource.data.comment.size() <= 500 && request.resource.data.createdAt == request.time;
    }
