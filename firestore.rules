@@ -66,7 +66,7 @@ service cloud.firestore {
    }
    match /rewardItems/{id} {
     allow read: if owner();
-    allow create: if owner() && request.resource.data.keys().hasOnly(['name','type']) && request.resource.data.type in ['product','coupon'] && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 180;
+    allow create: if owner() && request.resource.data.keys().hasOnly(['name','type','categoryId','description','eligible','priceCents','discountMode','discountValue']) && request.resource.data.type in ['product','coupon'] && (!('categoryId' in request.resource.data) || (request.resource.data.categoryId is string && request.resource.data.description is string && request.resource.data.description.size() <= 500 && request.resource.data.eligible is bool && ((request.resource.data.type == 'product' && request.resource.data.priceCents is int && request.resource.data.priceCents >= 0 && request.resource.data.priceCents <= 10000000) || (request.resource.data.type == 'coupon' && request.resource.data.discountMode in ['percent','fixed'] && request.resource.data.discountValue is number && request.resource.data.discountValue > 0 && request.resource.data.discountValue <= (request.resource.data.discountMode == 'percent' ? 100 : 100000))))) && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 180;
    }
    match /milestones/{id} {
     allow read: if owner() || (unitAccess(org) && signed() && exists(/databases/$(database)/documents/customerAccounts/$(request.auth.uid)));
