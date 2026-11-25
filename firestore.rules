@@ -80,7 +80,9 @@ service cloud.firestore {
      let slot = d.slots[d.slots.size()-1];
      let path = /databases/$(database)/documents/establishments/$(org)/bookingRequests/$(slot.id);
      let booking = getAfter(path).data;
-     return signed() && unitAccess(org) && d.keys().hasOnly(['professional','date','slots']) && d.slots is list && d.slots.size() == oldSlots.size()+1 && d.slots == oldSlots.concat([slot]) && slot.keys().hasOnly(['id','start','end']) && slot.start is int && slot.end is int && slot.start >= 0 && slot.end <= 1440 && slot.end > slot.start && noOverlap(oldSlots, slot) && slot.start == int(booking.time.split(':')[0])*60 + int(booking.time.split(':')[1]) && slot.end == slot.start + get(/databases/$(database)/documents/establishments/$(org)/services/$(booking.service)).data.duration && !exists(path) && booking.uid == request.auth.uid && booking.status == 'pending' && booking.professional == d.professional && booking.date == d.date && id == d.professional+'_'+d.date;
+     let serviceId = booking['service'];
+     let serviceDoc = get(/databases/$(database)/documents/establishments/$(org)/services/$(serviceId));
+     return signed() && unitAccess(org) && d.keys().hasOnly(['professional','date','slots']) && d.slots is list && d.slots.size() == oldSlots.size()+1 && d.slots == oldSlots.concat([slot]) && slot.keys().hasOnly(['id','start','end']) && slot.start is int && slot.end is int && slot.start >= 0 && slot.end <= 1440 && slot.end > slot.start && noOverlap(oldSlots, slot) && slot.start == int(booking.time.split(':')[0])*60 + int(booking.time.split(':')[1]) && slot.end == slot.start + serviceDoc.data.duration && !exists(path) && booking.uid == request.auth.uid && booking.status == 'pending' && booking.professional == d.professional && booking.date == d.date && id == d.professional+'_'+d.date;
     }
     function customerRelease() {
      let d = request.resource.data;
@@ -149,7 +151,8 @@ service cloud.firestore {
       && exists(/databases/$(database)/documents/publicCatalogs/$(org));
     }
     function hasReservation(d) {
-     let lock = getAfter(/databases/$(database)/documents/establishments/$(org)/bookingLocks/$(d.professional+'_'+d.date)).data;
+     let lockId = d.professional + '_' + d.date;
+     let lock = getAfter(/databases/$(database)/documents/establishments/$(org)/bookingLocks/$(lockId)).data;
      return lock.slots.size() > 0 && lock.slots[lock.slots.size()-1].id == id;
     }
     allow create: if unitAccess(org) && signed() && validBooking(request.resource.data) && hasReservation(request.resource.data);
