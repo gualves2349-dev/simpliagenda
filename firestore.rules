@@ -7,13 +7,13 @@ service cloud.firestore {
    let path = /databases/$(database)/documents/platformSubscriptions/$(org);
    return exists(path) ? (get(path).data.status in ['active','trial'] && 'expiresAt' in get(path).data && request.time < get(path).data.expiresAt) : (request.time < get(/databases/$(database)/documents/establishments/$(org)).data.createdAt + duration.value(7,'d'));
   }
-  match /customerAccounts/{uid} { allow get: if signed() && request.auth.uid == uid; allow create: if signed() && request.auth.uid == uid && request.resource.data.keys().hasOnly(['role']) && request.resource.data.role == 'customer'; }
-  match /managerAccounts/{uid} { allow get: if signed() && (request.auth.uid == uid || platformAdmin()); allow create: if platformAdmin() || (signed() && request.auth.uid == uid && request.resource.data.keys().hasOnly(['role','selfRegistered']) && request.resource.data.role == 'manager' && request.resource.data.selfRegistered == true); allow update, delete: if platformAdmin(); }
+  match /customerAccounts/{uid} { allow get: if signed() && request.auth.uid == uid; allow create: if signed() && !platformAdmin() && request.auth.uid == uid && request.resource.data.keys().hasOnly(['role']) && request.resource.data.role == 'customer'; }
+  match /managerAccounts/{uid} { allow get: if signed() && (request.auth.uid == uid || platformAdmin()); allow create: if platformAdmin() || (signed() && !platformAdmin() && request.auth.uid == uid && request.resource.data.keys().hasOnly(['role','selfRegistered']) && request.resource.data.role == 'manager' && request.resource.data.selfRegistered == true); allow update, delete: if platformAdmin(); }
   match /platformAdmins/{uid} { allow get: if signed() && request.auth.uid == uid; }
   match /platformSubscriptions/{org} {
    allow read: if platformAdmin();
    allow get: if signed() && get(/databases/$(database)/documents/establishments/$(org)).data.ownerUid == request.auth.uid;
-   allow create, update: if platformAdmin() && exists(/databases/$(database)/documents/establishments/$(org)) && request.resource.data.keys().hasOnly(['status','until','monthlyCents','updatedAt','expiresAt']) && request.resource.data.status in ['trial','active','blocked','inactive'] && request.resource.data.until is string && request.resource.data.until.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}') && request.resource.data.monthlyCents is int && request.resource.data.monthlyCents >= 0 && request.resource.data.monthlyCents <= 10000000 && request.resource.data.expiresAt is timestamp && request.resource.data.updatedAt == request.time;
+   allow create, update: if platformAdmin() && existsAfter(/databases/$(database)/documents/establishments/$(org)) && request.resource.data.keys().hasOnly(['status','until','monthlyCents','updatedAt','expiresAt']) && request.resource.data.status in ['trial','active','blocked','inactive'] && request.resource.data.until is string && request.resource.data.until.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}') && request.resource.data.monthlyCents is int && request.resource.data.monthlyCents >= 0 && request.resource.data.monthlyCents <= 10000000 && request.resource.data.expiresAt is timestamp && request.resource.data.updatedAt == request.time;
   }
   match /commercialSettings/{id} {
    allow read: if id == 'public';
@@ -34,7 +34,7 @@ service cloud.firestore {
   }
   match /establishments/{org} {
    allow read: if platformAdmin() || (signed() && resource.data.ownerUid == request.auth.uid);
-   allow create: if signed() && exists(/databases/$(database)/documents/managerAccounts/$(request.auth.uid)) && (!('selfRegistered' in get(/databases/$(database)/documents/managerAccounts/$(request.auth.uid)).data) || get(/databases/$(database)/documents/managerAccounts/$(request.auth.uid)).data.selfRegistered != true || org == request.auth.uid) && request.resource.data.keys().hasOnly(['name','segment','ownerUid','createdAt']) && request.resource.data.ownerUid == request.auth.uid && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 && request.resource.data.segment is string && request.resource.data.createdAt == request.time;
+   allow create: if ((signed() && !platformAdmin() && org == request.auth.uid && request.resource.data.ownerUid == request.auth.uid && exists(/databases/$(database)/documents/managerAccounts/$(request.auth.uid))) || (platformAdmin() && existsAfter(/databases/$(database)/documents/platformSubscriptions/$(org)) && getAfter(/databases/$(database)/documents/platformSubscriptions/$(org)).data.status == 'inactive')) && request.resource.data.keys().hasOnly(['name','segment','ownerUid','createdAt']) && request.resource.data.ownerUid is string && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 && request.resource.data.segment is string && request.resource.data.segment.size() <= 100 && request.resource.data.createdAt == request.time;
    function owner(){return unitAccess(org) && signed() && get(/databases/$(database)/documents/establishments/$(org)).data.ownerUid == request.auth.uid;}
    allow update: if owner() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','segment','brand']) && (!('brand' in request.resource.data) || validBrand(request.resource.data.brand)) && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 && request.resource.data.segment is string;
    function validBrand(b){return b is map && b.keys().hasOnly(['logo','address','phone','review']) && b.logo is string && b.logo.size() <= 500 && (b.logo == '' || b.logo.matches('https://.*')) && b.review is string && b.review.size() <= 500 && (b.review == '' || b.review.matches('https://.*')) && b.address is string && b.address.size() <= 250 && b.phone is string && b.phone.size() <= 20;}
@@ -127,8 +127,8 @@ service cloud.firestore {
       && d.email == request.auth.token.email
       && d.status == 'pending'
       && d.createdAt == request.time
-      && d.name is string && d.name.size() <= 100
-      && d.phone is string && d.phone.size() <= 20
+      && d.name is string && d.name.size() > 0 && d.name.size() <= 100
+      && d.phone is string && d.phone.size() >= 10 && d.phone.size() <= 20
       && exists(/databases/$(database)/documents/publicCatalogs/$(org));
     }
     function hasReservation(d) {
