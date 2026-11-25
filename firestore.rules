@@ -62,7 +62,8 @@ service cloud.firestore {
     allow read: if owner();
     allow create: if signed() && unitAccess(org) && request.resource.data.keys().hasOnly(['bookingId','from','to','actor','createdAt']) && request.resource.data.actor == request.auth.uid && request.resource.data.createdAt == request.time && validAudit(request.resource.data);
     function validAudit(d) {
-     let path = /databases/$(database)/documents/establishments/$(org)/bookingRequests/$(d.bookingId);
+     let auditBookingId = d.bookingId;
+     let path = /databases/$(database)/documents/establishments/$(org)/bookingRequests/$(auditBookingId);
      let before = get(path).data;
      let after = getAfter(path).data;
      return (owner() || assignedProfessional(before.professional)) && before.status == d.from && after.status == d.to && d.from != d.to;
@@ -78,7 +79,8 @@ service cloud.firestore {
     function customerAppend(oldSlots) {
      let d = request.resource.data;
      let slot = d.slots[d.slots.size()-1];
-     let path = /databases/$(database)/documents/establishments/$(org)/bookingRequests/$(slot.id);
+     let slotBookingId = slot.id;
+     let path = /databases/$(database)/documents/establishments/$(org)/bookingRequests/$(slotBookingId);
      let booking = getAfter(path).data;
      let serviceId = booking['service'];
      let serviceDoc = get(/databases/$(database)/documents/establishments/$(org)/services/$(serviceId));
@@ -86,7 +88,8 @@ service cloud.firestore {
     }
     function customerRelease() {
      let d = request.resource.data;
-     let path = /databases/$(database)/documents/establishments/$(org)/bookingRequests/$(d.releasedBooking);
+     let releasedBookingId = d.releasedBooking;
+     let path = /databases/$(database)/documents/establishments/$(org)/bookingRequests/$(releasedBookingId);
      let old = get(path).data;
      let after = getAfter(path).data;
      let slot = resource.data.slots[d.releasedIndex];
@@ -149,7 +152,7 @@ service cloud.firestore {
     allow read: if owner() || assignedProfessional(resource.data.professional);
     allow create: if owner() && validPayment();
    }
-   match /bookingRequests/{id} { allow delete: if owner();
+   match /bookingRequests/{id} { allow delete: if owner() && resource.data.status in ['pending','confirmed'] && !exists(/databases/$(database)/documents/establishments/$(org)/commissionEntries/$(id));
     function validBookingPrice(serviceId, price) {
      let serviceDoc = get(/databases/$(database)/documents/establishments/$(org)/services/$(serviceId));
      return price == serviceDoc.data.priceCents && serviceDoc.data.active == true;
