@@ -9,6 +9,10 @@ service cloud.firestore {
    return exists(path) ? (get(path).data.status in ['active','trial'] && 'expiresAt' in get(path).data && request.time < get(path).data.expiresAt) : (request.time < get(/databases/$(database)/documents/establishments/$(org)).data.createdAt + duration.value(7,'d'));
   }
   match /customerAccounts/{uid} { allow get: if signed() && request.auth.uid == uid; allow create: if authenticated() && !exists(/databases/$(database)/documents/platformAdmins/$(request.auth.uid)) && request.auth.uid == uid && request.resource.data.keys().hasOnly(['role']) && request.resource.data.role == 'customer'; }
+  match /customerAccounts/{uid}/pushDevices/{device} {
+   allow get, list, delete: if signed() && request.auth.uid == uid;
+   allow create, update: if signed() && request.auth.uid == uid && exists(/databases/$(database)/documents/customerAccounts/$(uid)) && device.matches('[a-f0-9]{64}') && request.resource.data.keys().hasOnly(['token','org','updatedAt']) && request.resource.data.token is string && request.resource.data.token.size() > 20 && request.resource.data.token.size() <= 4096 && request.resource.data.org is string && unitAccess(request.resource.data.org) && request.resource.data.updatedAt == request.time;
+  }
   match /managerAccounts/{uid} { allow get: if signed() && (request.auth.uid == uid || platformAdmin()); allow create: if platformAdmin() || (authenticated() && !exists(/databases/$(database)/documents/platformAdmins/$(request.auth.uid)) && request.auth.uid == uid && request.resource.data.keys().hasOnly(['role','selfRegistered']) && request.resource.data.role == 'manager' && request.resource.data.selfRegistered == true); allow update, delete: if platformAdmin(); }
   match /platformAdmins/{uid} { allow get: if signed() && request.auth.uid == uid; }
   match /platformSubscriptions/{org} {

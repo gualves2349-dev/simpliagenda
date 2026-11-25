@@ -1,0 +1,13 @@
+SIMPLIAGENDA 44.9 - PUSH LOCAL (base 45.30)
+1. Pare o bot WhatsApp antigo e feche abas antigas. Se instalou o protocolo Windows, execute Desinstalar.ps1 do projeto original (opcional). Se houver Cloud Functions antigas ativas, desative seus gatilhos de WhatsApp no console; este pacote não altera funções implantadas.
+2. Copie app.js, index.html, style.css, firestore.rules, sw.js, manifest.webmanifest, push-client.js e push-config.js para a raiz do site. Preserve firebase-config.js e ícones. Confira a chave pública VAPID em push-config.js com a chave copiada do Firebase. Publique regras e site. Não publique a pasta push-local.
+3. Extraia push-local para C:\SimpliAgenda\push-local. Mantenha o JSON privado em C:\SimpliAgenda\segredos\firebase-admin.json (fora de qualquer repositório). Instale Node.js 20+ se necessário.
+4. PowerShell: cd C:\SimpliAgenda\push-local
+   npm.cmd install
+   $env:GOOGLE_APPLICATION_CREDENTIALS = 'C:\SimpliAgenda\segredos\firebase-admin.json'
+   npm.cmd start
+5. Abra o link do cliente no celular, instale pela tela inicial, abra pelo ícone, entre e clique Ativar notificações. Se necessário, atualize a página e confirme a chave VAPID.
+6. Com o servidor ligado, crie um NOVO agendamento e confirme pelo funcionário. O console registra aceitação FCM, não entrega. Não deve enviar na solicitação, conclusão ou confirmação pelo gestor.
+7. O servidor registra uma tentativa por agendamento em pushDispatch44. Falhas ambíguas não são reenviadas automaticamente, para evitar duplicidade. O início é salvo em start-local.json; não apague para evitar reprocessamento. Eventos antigos anteriores à primeira execução não são enviados. O servidor precisa ficar ligado para envio imediato. Notificação genérica para preservar privacidade na tela bloqueada. Desative notificações antes de trocar de conta/dispositivo compartilhado.
+8. No iOS 16.4+ é necessário instalar na tela inicial e abrir pelo ícone. O manifesto não fixa start_url para preservar o link da unidade; testar instalação real em ambos sistemas. Não há garantia de entrega em todos dispositivos.
+9. Validação local de sintaxe somente; regras e integração FCM ainda precisam de testes reais. E-mails fictícios continuam permitidos. Não há backup automático nem alteração de cobrança.
