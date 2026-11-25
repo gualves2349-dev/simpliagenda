@@ -12,3 +12,5 @@ self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('a
 
 // Release 44.60
 // Release 44.70
+
+// Release 44.71

@@ -68,6 +68,10 @@ service cloud.firestore {
     allow read: if owner();
     allow create: if owner() && request.resource.data.keys().hasOnly(['name','type','categoryId','description','eligible','priceCents','discountMode','discountValue']) && request.resource.data.type in ['product','coupon'] && (!('categoryId' in request.resource.data) || (request.resource.data.categoryId is string && request.resource.data.description is string && request.resource.data.description.size() <= 500 && request.resource.data.eligible is bool && ((request.resource.data.type == 'product' && request.resource.data.priceCents is int && request.resource.data.priceCents >= 0 && request.resource.data.priceCents <= 10000000) || (request.resource.data.type == 'coupon' && request.resource.data.discountMode in ['percent','fixed'] && request.resource.data.discountValue is number && request.resource.data.discountValue > 0 && request.resource.data.discountValue <= (request.resource.data.discountMode == 'percent' ? 100 : 100000))))) && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 180;
    }
+   match /trailSettings/{id} {
+    allow read: if owner();
+    allow create, update: if owner() && id == 'main' && request.resource.data.keys().hasOnly(['length']) && request.resource.data.length is int && request.resource.data.length >= 1 && request.resource.data.length <= 10000;
+   }
    match /milestones/{id} {
     allow read: if owner() || (unitAccess(org) && signed() && exists(/databases/$(database)/documents/customerAccounts/$(request.auth.uid)));
     allow create: if owner() && request.resource.data.keys().hasOnly(['goal','type','name','itemId']) && request.resource.data.goal is int && request.resource.data.goal >= 1 && request.resource.data.goal <= 10000 && id == string(request.resource.data.goal) && request.resource.data.type in ['product','coupon','service'] && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 180 && request.resource.data.itemId is string;
