@@ -4,9 +4,13 @@ service cloud.firestore {
   function authenticated(){return request.auth != null;}
   function signed(){return authenticated();}
   function platformAdmin(){return signed() && exists(/databases/$(database)/documents/platformAdmins/$(request.auth.uid));}
+  function trialDays56() {
+   let p = /databases/$(database)/documents/commercialSettings/public;
+   return exists(p) && 'trialDays' in get(p).data ? get(p).data.trialDays : 7;
+  }
   function unitAccess(org) {
    let path = /databases/$(database)/documents/platformSubscriptions/$(org);
-   return exists(path) ? (get(path).data.status in ['active','trial'] && 'expiresAt' in get(path).data && request.time < get(path).data.expiresAt) : (request.time < get(/databases/$(database)/documents/establishments/$(org)).data.createdAt + duration.value(7,'d'));
+   return exists(path) ? (get(path).data.status in ['active','trial'] && 'expiresAt' in get(path).data && request.time < get(path).data.expiresAt) : (request.time < get(/databases/$(database)/documents/establishments/$(org)).data.createdAt + duration.value(trialDays56(),'d'));
   }
   match /pushTemplates/{id} {
    allow read, delete: if platformAdmin();
@@ -27,7 +31,7 @@ service cloud.firestore {
   }
   match /commercialSettings/{id} {
    allow read: if id == 'public';
-   allow write: if platformAdmin() && id == 'public' && request.resource.data.keys().hasOnly(['pix','whatsapp','monthly','annual']) && request.resource.data.pix is string && request.resource.data.pix.size() <= 200 && request.resource.data.whatsapp is string && request.resource.data.whatsapp.matches('[0-9]{10,15}') && request.resource.data.monthly is int && request.resource.data.monthly > 0 && request.resource.data.annual is int && request.resource.data.annual > 0;
+   allow write: if platformAdmin() && id == 'public' && request.resource.data.keys().hasOnly(['pix','whatsapp','monthly','annual','trialDays']) && request.resource.data.pix is string && request.resource.data.pix.size() <= 200 && request.resource.data.whatsapp is string && request.resource.data.whatsapp.matches('[0-9]{10,15}') && request.resource.data.monthly is int && request.resource.data.monthly > 0 && request.resource.data.annual is int && request.resource.data.annual > 0 && (!('trialDays' in request.resource.data) || (request.resource.data.trialDays is int && request.resource.data.trialDays >= 0 && request.resource.data.trialDays <= 90));
   }
   match /licensePayments/{id} {
    allow read: if platformAdmin();
@@ -85,11 +89,7 @@ service cloud.firestore {
     allow read, delete: if owner();
     allow create, update: if owner() && request.resource.data.keys().hasOnly(['birth','consent','note']) && request.resource.data.birth is string && (request.resource.data.birth == '' || request.resource.data.birth.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')) && request.resource.data.consent is bool && request.resource.data.note is string && request.resource.data.note.size() <= 300;
    }
-   match /coupons/{id} {
-    allow read: if owner() || (unitAccess(org) && signed() && exists(/databases/$(database)/documents/customerAccounts/$(request.auth.uid)));
-    allow delete: if owner();
-    allow create, update: if owner() && id.matches('[A-Z0-9_-]{3,24}') && request.resource.data.keys().hasOnly(['offer','until']) && request.resource.data.offer is string && request.resource.data.offer.size() > 0 && request.resource.data.offer.size() <= 180 && request.resource.data.until is string && request.resource.data.until.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}');
-   }
+   match /coupons/{id} { allow read, write: if false; }
    match /customers/{id} {
     allow read: if owner();
     allow create, update: if owner() && request.resource.data.keys().hasOnly(['name','email','phone']) && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 && request.resource.data.email is string && request.resource.data.email.size() <= 254 && request.resource.data.phone is string && request.resource.data.phone.size() <= 20;
