@@ -1,0 +1,7 @@
+SIMPLIAGENDA 46.0 — experiência do cliente
+Base: ZIP GitHub fornecido (commit 27582ba51dfc3ebb0da14270aa072865621691c4).
+Substitua index.html, app.js e style.css no GitHub. Nenhuma alteração nas regras, Firebase, manifesto ou servidor push. O ZIP preserva a estrutura original; não publique arquivos privados do servidor.
+Gestor: Dados da unidade > Personalização e dados da unidade > Enviar logotipo > Salvar alterações. Logo por unidade no cabeçalho e central do cliente.
+Cliente: banner no topo, inclusive antes do login, com instalação via mecanismo existente e instruções manuais. Ícone instalado continua SimpliAgenda; não é personalizado por unidade. Login continua obrigatório antes do agendamento.
+Fluxo: serviço > profissional > data > horário > dados > revisão. Transação existente preservada.
+Testes locais: sintaxe JS e IDs HTML. Não testado com Firebase real nem em Android/iOS. Teste seleção de serviços, voltar, repetir agendamento, horários concorrentes, login dos quatro perfis, logo de duas unidades e instalação/notificações antes de comercializar.
