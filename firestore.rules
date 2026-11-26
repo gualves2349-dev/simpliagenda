@@ -124,7 +124,7 @@ service cloud.firestore {
      let booking = getAfter(path).data;
      let serviceId = booking['service'];
      let serviceDoc = get(/databases/$(database)/documents/establishments/$(org)/services/$(serviceId));
-     return signed() && unitAccess(org) && d.keys().hasOnly(['professional','date','slots']) && d.slots is list && d.slots.size() == oldSlots.size()+1 && d.slots == oldSlots.concat([slot]) && slot.keys().hasOnly(['id','start','end']) && slot.start is int && slot.end is int && slot.start >= 0 && slot.end <= 1440 && slot.end > slot.start && noOverlap(oldSlots, slot) && slot.start == int(booking.time.split(':')[0])*60 + int(booking.time.split(':')[1]) && slot.end == slot.start + serviceDoc.data.duration && !exists(path) && booking.uid == request.auth.uid && booking.status == 'pending' && booking.professional == d.professional && booking.date == d.date && id == d.professional+'_'+d.date;
+     return signed() && unitAccess(org) && d.keys().hasOnly(['professional','date','slots']) && d.slots is list && d.slots.size() == oldSlots.size()+1 && d.slots == oldSlots.concat([slot]) && slot.keys().hasOnly(['id','start','end']) && slot.start is int && slot.end is int && slot.start >= 0 && slot.end <= 1440 && slot.end > slot.start && noOverlap(oldSlots, slot) && slot.start == int(booking.time.split(':')[0])*60 + int(booking.time.split(':')[1]) && slot.end == slot.start + sum484(bookingServiceIds484(booking), 'duration') && !exists(path) && booking.uid == request.auth.uid && booking.status == 'pending' && booking.professional == d.professional && booking.date == d.date && id == d.professional+'_'+d.date;
     }
     function customerRelease() {
      let d = request.resource.data;
@@ -191,6 +191,14 @@ service cloud.firestore {
     allow read: if owner() || assignedProfessional(resource.data.professional);
     allow create: if owner() && validPayment();
    }
+   function bookingServiceIds484(b) { return 'serviceIds' in b ? b.serviceIds : [b.service]; }
+   function svc484(id) { return get(/databases/$(database)/documents/establishments/$(org)/services/$(id)).data; }
+   function sum484(ids, field) { return svc484(ids[0])[field] + (ids.size() > 1 ? svc484(ids[1])[field] : 0) + (ids.size() > 2 ? svc484(ids[2])[field] : 0); }
+   function validBundle484(b) {
+     let ids = bookingServiceIds484(b);
+     let pro = get(/databases/$(database)/documents/establishments/$(org)/professionals/$(b.professional)).data;
+     return ids is list && ids.size() >= 1 && ids.size() <= 3 && ids.toSet().size() == ids.size() && ids[0] == b.service && pro.active == true && pro.serviceIds.hasAll(ids) && svc484(ids[0]).active == true && (ids.size() < 2 || svc484(ids[1]).active == true) && (ids.size() < 3 || svc484(ids[2]).active == true) && b.priceCents == sum484(ids, 'priceCents');
+   }
    match /bookingRequests/{id} { allow delete: if owner() && resource.data.status in ['pending','confirmed'] && !exists(/databases/$(database)/documents/establishments/$(org)/commissionEntries/$(id));
     function validBookingPrice(serviceId, price) {
      let serviceDoc = get(/databases/$(database)/documents/establishments/$(org)/services/$(serviceId));
@@ -218,14 +226,14 @@ service cloud.firestore {
      return pro.data.active == true && serviceId in pro.data.serviceIds;
     }
     function validBooking(d) {
-     return d.keys().hasOnly(['uid','email','name','phone','professional','service','date','time','status','createdAt','priceCents'])
+     return d.keys().hasOnly(['uid','email','name','phone','professional','service','date','time','status','createdAt','priceCents','serviceIds'])
       && d['service'] is string
       && d.professional is string
       && d.date is string && d.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
       && d.time is string && d.time.matches('([01][0-9]|2[0-3]):[0-5][0-9]')
       && validProfessional(d.professional, d['service'])
       && d.priceCents is int
-      && validBookingPrice(d['service'], d.priceCents)
+      && validBundle484(d)
       && d.uid == request.auth.uid
       && d.email == request.auth.token.email
       && d.status == 'pending'
