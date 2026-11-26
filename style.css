@@ -76,3 +76,17 @@ body:not([data-session="authenticated"]) #installBanner46,body:not([data-session
 #serviceCards46 .service46[aria-pressed="true"]::before{content:'✓ ';font-weight:800}
 #serviceCards46 .total484{grid-column:1/-1;font-weight:600;color:#e6c66c}
 #bookingForm label:has(#bookingService){display:none!important}
+
+/* 48.5 — customer navigation and vertical booking list */
+#bottom48{display:none!important}
+#serviceCards46{grid-template-columns:minmax(0,1fr)!important;gap:8px!important}
+#serviceCards46 .serviceCategory485{margin:14px 0 3px;color:var(--unit-accent48,#d4af37);font-size:16px}
+#serviceCards46 .service46{display:grid!important;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;width:100%;min-width:0;min-height:58px}
+#serviceCards46 .service46::before{content:none!important}
+#serviceCards46 .service46::after{content:'○';grid-column:2;grid-row:1 / span 2;font-size:21px;color:#aaa}
+#serviceCards46 .service46[aria-pressed=true]::after{content:'✓';color:#e9c77d}
+.serviceName485,.serviceMeta485{grid-column:1;min-width:0;overflow-wrap:anywhere}.serviceMeta485{font-size:13px;color:#d4c8b0;font-weight:400}
+#bookingForm .hours485{border-top:1px solid #343942}#bookingForm .hours485>h3{display:block!important;margin:0 0 12px;font-size:16px}.noSlots485{grid-column:1/-1;color:#e9c77d}
+@media(max-width:700px){body[data-session="authenticated"]:has(#customerPanel:not([hidden])) #bottom48:not([hidden]){display:flex!important;position:fixed!important;inset:auto 0 0 0!important;width:100%!important;height:auto!important;min-height:0!important;max-height:90px!important;margin:0!important;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px))!important;align-items:center!important;flex-wrap:nowrap!important;overflow:visible!important;z-index:50!important}#bottom48 button{flex:1 1 0!important;width:auto!important;height:44px!important;min-height:44px!important;max-height:44px!important;margin:0!important;padding:4px 2px!important;font-size:12px!important}body[data-session="authenticated"]:has(#customerPanel:not([hidden])) #headerMenus #customerNav{display:none!important}body[data-session="authenticated"]:has(#customerPanel:not([hidden])){padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))!important}}
+
+.comboSuggestion485:not([hidden]){display:grid;gap:10px;padding:14px;border:1px solid var(--accent,#d4af37);border-radius:12px;margin:12px 0}.comboSuggestion485[hidden]{display:none!important}#comboParts485{display:grid;gap:8px}

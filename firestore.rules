@@ -49,7 +49,7 @@ service cloud.firestore {
    allow update: if owner() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','segment','brand']) && (!('brand' in request.resource.data) || validBrand(request.resource.data.brand)) && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 && request.resource.data.segment is string;
    function validBrand(b){return b is map && b.keys().hasOnly(['logo','address','phone','review','accent']) && (!('accent' in b) || (b.accent is string && (b.accent == '' || b.accent.matches('#[0-9A-Fa-f]{6}')))) && b.logo is string && b.logo.size() <= 60000 && (b.logo == '' || (b.logo.size() <= 500 && b.logo.matches('https://.*')) || b.logo.matches('data:image/jpeg;base64,[A-Za-z0-9+/=]+')) && b.review is string && b.review.size() <= 500 && (b.review == '' || b.review.matches('https://.*')) && b.address is string && b.address.size() <= 250 && b.phone is string && b.phone.size() <= 20;}
    function categoryExists(id){return exists(/databases/$(database)/documents/establishments/$(org)/categories/$(id));}
-   function serviceValid(d){return d.keys().hasOnly(['name','priceCents','duration','active','createdAt','categoryId']) && (!('categoryId' in d) || (d.categoryId is string && (d.categoryId == '' || categoryExists(d.categoryId)))) && d.name is string && d.name.size() > 0 && d.name.size() <= 100 && d.priceCents is int && d.priceCents >= 0 && d.priceCents <= 10000000 && d.duration is int && d.duration >= 5 && d.duration <= 720 && d.duration % 5 == 0 && d.active is bool && d.createdAt is timestamp;}
+   function serviceValid(d){return d.keys().hasOnly(['name','priceCents','duration','active','createdAt','categoryId','comboParts']) && (!('comboParts' in d) || (d.comboParts is list && d.comboParts.size() <= 3 && d.comboParts.size() != 1 && (d.comboParts.size() == 0 || (d.comboParts[0] is string && d.comboParts[1] is string && d.comboParts[0] != d.comboParts[1] && (d.comboParts.size() == 2 || (d.comboParts[2] is string && d.comboParts[2] != d.comboParts[0] && d.comboParts[2] != d.comboParts[1])))))) && (!('categoryId' in d) || (d.categoryId is string && (d.categoryId == '' || categoryExists(d.categoryId)))) && d.name is string && d.name.size() > 0 && d.name.size() <= 100 && d.priceCents is int && d.priceCents >= 0 && d.priceCents <= 10000000 && d.duration is int && d.duration >= 5 && d.duration <= 720 && d.duration % 5 == 0 && d.active is bool && d.createdAt is timestamp;}
    function proValid(d){return d.keys().hasOnly(['name','specialty','email','photo','active','serviceIds','createdAt','uid','archived']) && (!('archived' in d) || (d.archived is bool && (!d.archived || (d.active == false && d.uid == '')))) && d.name is string && d.name.size() > 0 && d.name.size() <= 100 && d.specialty is string && d.specialty.size() > 0 && d.specialty.size() <= 100 && d.email is string && d.email.size() <= 254 && d.photo is string && d.photo.size() <= 120000 && (d.photo == '' || d.photo.matches('https://.*') || d.photo.matches('data:image/jpeg;base64,[A-Za-z0-9+/=]+')) && (!('uid' in d) || (d.uid is string && d.uid.size() <= 128)) && d.active is bool && d.serviceIds is list && d.serviceIds.size() <= 200 && d.createdAt is timestamp;}
    match /professionalGoals/{id} {
     allow get: if owner() || assignedProfessional(id);
@@ -191,13 +191,14 @@ service cloud.firestore {
     allow read: if owner() || assignedProfessional(resource.data.professional);
     allow create: if owner() && validPayment();
    }
-   function bookingServiceIds484(b) { return 'serviceIds' in b ? b.serviceIds : [b.service]; }
-   function svc484(id) { return get(/databases/$(database)/documents/establishments/$(org)/services/$(id)).data; }
+   function bookingServiceIds484(b) { return 'serviceIds' in b ? b.serviceIds : [b['service']]; }
+   function svc484(serviceId) { return get(/databases/$(database)/documents/establishments/$(org)/services/$(serviceId)).data; }
    function sum484(ids, field) { return svc484(ids[0])[field] + (ids.size() > 1 ? svc484(ids[1])[field] : 0) + (ids.size() > 2 ? svc484(ids[2])[field] : 0); }
    function validBundle484(b) {
      let ids = bookingServiceIds484(b);
-     let pro = get(/databases/$(database)/documents/establishments/$(org)/professionals/$(b.professional)).data;
-     return ids is list && ids.size() >= 1 && ids.size() <= 3 && ids.toSet().size() == ids.size() && ids[0] == b.service && pro.active == true && pro.serviceIds.hasAll(ids) && svc484(ids[0]).active == true && (ids.size() < 2 || svc484(ids[1]).active == true) && (ids.size() < 3 || svc484(ids[2]).active == true) && b.priceCents == sum484(ids, 'priceCents');
+     let professionalId = b.professional;
+     let pro = get(/databases/$(database)/documents/establishments/$(org)/professionals/$(professionalId)).data;
+     return ids is list && ids.size() >= 1 && ids.size() <= 3 && ids.toSet().size() == ids.size() && ids[0] == b['service'] && pro.active == true && pro.serviceIds.hasAll(ids) && svc484(ids[0]).active == true && (ids.size() < 2 || svc484(ids[1]).active == true) && (ids.size() < 3 || svc484(ids[2]).active == true) && b.priceCents == sum484(ids, 'priceCents');
    }
    match /bookingRequests/{id} { allow delete: if owner() && resource.data.status in ['pending','confirmed'] && !exists(/databases/$(database)/documents/establishments/$(org)/commissionEntries/$(id));
     function validBookingPrice(serviceId, price) {
