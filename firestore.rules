@@ -208,6 +208,10 @@ service cloud.firestore {
      let pro = get(/databases/$(database)/documents/establishments/$(org)/professionals/$(professionalId)).data;
      return ids is list && ids.size() >= 1 && ids.size() <= 3 && ids.toSet().size() == ids.size() && ids[0] == b['service'] && pro.active == true && pro.serviceIds.hasAll(ids) && svc484(ids[0]).active == true && (ids.size() < 2 || svc484(ids[1]).active == true) && (ids.size() < 3 || svc484(ids[2]).active == true) && b.priceCents == sum484(ids, 'priceCents');
    }
+   match /quickLimits/{uid} {
+    allow get: if signed() && request.auth.uid == uid;
+    allow create, update: if signed() && request.auth.uid == uid && request.auth.token.firebase.sign_in_provider == 'anonymous' && unitAccess(org) && request.resource.data.keys().hasOnly(['at','booking']) && request.resource.data.at == request.time && request.resource.data.booking is string && (!exists(/databases/$(database)/documents/establishments/$(org)/quickLimits/$(uid)) || request.time >= resource.data.at + duration.value(60,'s'));
+   }
    match /bookingRequests/{id} { allow delete: if owner() && resource.data.status in ['pending','confirmed'] && !exists(/databases/$(database)/documents/establishments/$(org)/commissionEntries/$(id));
     function validBookingPrice(serviceId, price) {
      let serviceDoc = get(/databases/$(database)/documents/establishments/$(org)/services/$(serviceId));
@@ -244,7 +248,7 @@ service cloud.firestore {
       && d.priceCents is int
       && validBundle484(d)
       && d.uid == request.auth.uid
-      && d.email == request.auth.token.email
+      && ((request.auth.token.firebase.sign_in_provider == 'anonymous' && d.email == '') || (request.auth.token.firebase.sign_in_provider != 'anonymous' && d.email == request.auth.token.email))
       && d.status == 'pending'
       && d.createdAt == request.time
       && d.name is string && d.name.size() > 0 && d.name.size() <= 100
@@ -256,7 +260,7 @@ service cloud.firestore {
      let lock = getAfter(/databases/$(database)/documents/establishments/$(org)/bookingLocks/$(lockId)).data;
      return lock.slots.size() > 0 && lock.slots[lock.slots.size()-1].id == id;
     }
-    allow create: if unitAccess(org) && signed() && exists(/databases/$(database)/documents/customerAccounts/$(request.auth.uid)) && validBooking(request.resource.data) && hasReservation(request.resource.data);
+    allow create: if unitAccess(org) && signed() && (exists(/databases/$(database)/documents/customerAccounts/$(request.auth.uid)) || (request.auth.token.firebase.sign_in_provider == 'anonymous' && request.resource.data.phone.matches('55[0-9]{10,11}') && getAfter(/databases/$(database)/documents/establishments/$(org)/quickLimits/$(request.auth.uid)).data.booking == id && getAfter(/databases/$(database)/documents/establishments/$(org)/quickLimits/$(request.auth.uid)).data.at == request.time)) && validBooking(request.resource.data) && hasReservation(request.resource.data);
    }
    match /feedback/{id} { allow delete: if owner();
     function bookingData(){return get(/databases/$(database)/documents/establishments/$(org)/bookingRequests/$(id)).data;}
