@@ -12,6 +12,10 @@ service cloud.firestore {
    let path = /databases/$(database)/documents/platformSubscriptions/$(org);
    return exists(path) ? (get(path).data.status in ['active','trial'] && 'expiresAt' in get(path).data && request.time < get(path).data.expiresAt) : (request.time < get(/databases/$(database)/documents/establishments/$(org)).data.createdAt + duration.value(trialDays56(),'d'));
   }
+  match /legalAcceptances/{uid}/versions/{version} {
+   allow get: if signed() && request.auth.uid == uid;
+   allow create: if signed() && request.auth.uid == uid && version == '57.0' && request.resource.data.keys().hasOnly(['version','acceptedAt']) && request.resource.data.version == version && request.resource.data.acceptedAt == request.time;
+  }
   match /pushTemplates/{id} {
    allow read, delete: if platformAdmin();
    allow create, update: if platformAdmin() && (id == 'global' || id.matches('org_.+')) && request.resource.data.keys().hasOnly(['title','body']) && request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 100 && request.resource.data.body is string && request.resource.data.body.size() > 0 && request.resource.data.body.size() <= 300;
@@ -69,9 +73,12 @@ service cloud.firestore {
     allow create, update: if owner() && request.resource.data.keys().hasOnly(['used','lastReward','updatedAt']) && request.resource.data.used is int && request.resource.data.used > 0 && request.resource.data.lastReward is string && request.resource.data.lastReward.size() <= 100 && request.resource.data.updatedAt == request.time && (!exists(/databases/$(database)/documents/establishments/$(org)/rewardBalances/$(uid)) || request.resource.data.used > resource.data.used);
    }
    match /rewardItems/{id} {
-    allow read: if owner();
-    allow update: if owner() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['categoryId']) && request.resource.data.categoryId is string && (request.resource.data.categoryId == '' || exists(/databases/$(database)/documents/establishments/$(org)/categories/$(request.resource.data.categoryId)));
-    allow create: if owner() && request.resource.data.keys().hasOnly(['name','type','categoryId','description','eligible','priceCents','discountMode','discountValue']) && request.resource.data.type in ['product','coupon'] && (!('categoryId' in request.resource.data) || (request.resource.data.categoryId is string && request.resource.data.description is string && request.resource.data.description.size() <= 500 && request.resource.data.eligible is bool && ((request.resource.data.type == 'product' && request.resource.data.priceCents is int && request.resource.data.priceCents >= 0 && request.resource.data.priceCents <= 10000000) || (request.resource.data.type == 'coupon' && request.resource.data.discountMode in ['percent','fixed'] && request.resource.data.discountValue is number && request.resource.data.discountValue > 0 && request.resource.data.discountValue <= (request.resource.data.discountMode == 'percent' ? 100 : 100000))))) && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 180;
+    allow read, delete: if owner();
+    function validReward(d) {
+     return d.keys().hasOnly(['name','type','categoryId','description','eligible','priceCents','discountMode','discountValue','draft']) && d.type in ['product','coupon'] && d.name is string && d.name.size() > 0 && d.name.size() <= 180 && d.categoryId is string && (d.categoryId == '' || categoryExists(d.categoryId)) && d.description is string && d.description.size() <= 500 && d.eligible is bool && (!('draft' in d) || (d.draft is bool && (!d.draft || !d.eligible))) && ((d.type == 'product' && d.priceCents is int && d.priceCents >= 0 && d.priceCents <= 10000000) || (d.type == 'coupon' && d.discountMode in ['percent','fixed'] && d.discountValue is number && d.discountValue > 0 && d.discountValue <= (d.discountMode == 'percent' ? 100 : 100000)));
+    }
+    allow create: if owner() && validReward(request.resource.data);
+    allow update: if owner() && request.resource.data.type == resource.data.type && validReward(request.resource.data);
    }
    match /trailSettings/{id} {
     allow read: if owner() || (unitAccess(org) && signed() && exists(/databases/$(database)/documents/customerAccounts/$(request.auth.uid)));
@@ -95,7 +102,7 @@ service cloud.firestore {
     allow create, update: if owner() && request.resource.data.keys().hasOnly(['name','email','phone']) && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 && request.resource.data.email is string && request.resource.data.email.size() <= 254 && request.resource.data.phone is string && request.resource.data.phone.size() <= 20;
    }
    match /categories/{id} {
-    allow read: if owner();
+    allow read, delete: if owner();
     allow create, update: if owner() && request.resource.data.keys().hasOnly(['name']) && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 80;
    }
    match /auditEvents/{event} {
@@ -139,7 +146,7 @@ service cloud.firestore {
     allow update: if ('releasedBooking' in request.resource.data && 'releasedIndex' in request.resource.data) ? customerRelease() : (request.resource.data.professional == resource.data.professional && request.resource.data.date == resource.data.date && customerAppend(resource.data.slots));
  allow delete: if owner(); allow get: if (unitAccess(org) && exists(/databases/$(database)/documents/publicCatalogs/$(org))) || owner(); allow list: if owner(); allow create, update: if owner() || (assignedProfessional(request.resource.data.professional) && id == request.resource.data.professional + '_' + request.resource.data.date && request.resource.data.keys().hasOnly(['professional','date','slots','releasedBooking','releasedIndex']) && request.resource.data.slots is list); }
    match /services/{id}{
-    allow read: if owner();
+    allow read, delete: if owner();
     allow create: if owner() && serviceValid(request.resource.data) && request.resource.data.createdAt == request.time;
     allow update: if owner() && serviceValid(request.resource.data) && request.resource.data.createdAt == resource.data.createdAt;
    }
@@ -248,7 +255,7 @@ service cloud.firestore {
      let lock = getAfter(/databases/$(database)/documents/establishments/$(org)/bookingLocks/$(lockId)).data;
      return lock.slots.size() > 0 && lock.slots[lock.slots.size()-1].id == id;
     }
-    allow create: if unitAccess(org) && signed() && validBooking(request.resource.data) && hasReservation(request.resource.data);
+    allow create: if unitAccess(org) && signed() && exists(/databases/$(database)/documents/customerAccounts/$(request.auth.uid)) && validBooking(request.resource.data) && hasReservation(request.resource.data);
    }
    match /feedback/{id} { allow delete: if owner();
     function bookingData(){return get(/databases/$(database)/documents/establishments/$(org)/bookingRequests/$(id)).data;}
