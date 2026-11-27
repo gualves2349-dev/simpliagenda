@@ -27,9 +27,6 @@ $('reset').onclick=()=>run(async()=>{await sendPasswordResetEmail(auth,loginEmai
 // 48.1: Google login uses only the named customer Auth instance.
 const customerGoogle481=role25==='customer'&&!!route24.get('agenda');
 $('customerAuth481').hidden=!customerGoogle481;
-if(customerGoogle481){
- document.body.classList.add('customer-auth481');
- $('signupLink481').onclick=()=>{$('register').click();$('signupPrompt481').textContent=registering?'Já tem uma conta?':'Ainda não tem uma conta?';$('signupLink481').textContent=registering?'Entrar':'Cadastre-se';};
  // 80.3 — scoped realtime recovery; no page reload or periodic polling.
 const liveSet83=new Set();let superStops83=[],superTimer83=0,superDirty83=false,superBusy83=false,resumeTimer83=0,hiddenAt83=0;
 const onSnapshot=firebaseSnapshot83;
@@ -41,6 +38,10 @@ function queueSuper83(){superDirty83=true;clearTimeout(superTimer83);superTimer8
 function watchSuper83(){for(const stop of superStops83)stop();superStops83=[];for(const target of [collection(db,'establishments'),collection(db,'platformSubscriptions'),collection(db,'licensePayments')]){superStops83.push(liveBookings83(target,snap=>{if(!snap.metadata.fromCache)queueSuper83();},e=>console.warn('Listener administrativo',e)));}}
 function resume83(force=false){clearTimeout(resumeTimer83);resumeTimer83=setTimeout(()=>{if(document.hidden||!navigator.onLine||!auth.currentUser)return;for(const x of liveSet83)if(force||!x.ready||x.error)x.restart();if(role25==='superadmin'&&superDirty83)queueSuper83();connection83();},250);}
 window.addEventListener('offline',connection83);window.addEventListener('online',()=>resume83(true));window.addEventListener('pageshow',e=>resume83(e.persisted));window.addEventListener('focus',()=>resume83());document.addEventListener('visibilitychange',()=>{if(document.hidden){hiddenAt83=Date.now();return;}resume83(Date.now()-hiddenAt83>15000);});document.addEventListener('focusout',()=>{if(superDirty83)queueSuper83();});document.addEventListener('close',()=>{if(superDirty83)queueSuper83();},true);
+
+if(customerGoogle481){
+ document.body.classList.add('customer-auth481');
+ $('signupLink481').onclick=()=>{$('register').click();$('signupPrompt481').textContent=registering?'Já tem uma conta?':'Ainda não tem uma conta?';$('signupLink481').textContent=registering?'Entrar':'Cadastre-se';};
 sessionReady40.then(()=>{$('googleLogin481').disabled=false;}).catch(()=>{});
  $('googleLogin481').onclick=async()=>{
   const button=$('googleLogin481'),status=$('googleStatus481'); if(button.disabled)return;
