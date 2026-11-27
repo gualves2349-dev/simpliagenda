@@ -81,12 +81,12 @@ service cloud.firestore {
     allow update: if owner() && request.resource.data.type == resource.data.type && validReward(request.resource.data);
    }
    match /trailSettings/{id} {
-    allow read: if owner() || (unitAccess(org) && signed() && exists(/databases/$(database)/documents/customerAccounts/$(request.auth.uid)));
+    allow read: if owner() || (unitAccess(org) && signed() && (exists(/databases/$(database)/documents/customerAccounts/$(request.auth.uid)) || request.auth.token.firebase.sign_in_provider == 'anonymous'));
     allow create, update: if owner() && id == 'main' && request.resource.data.keys().hasOnly(['length']) && request.resource.data.length is int && request.resource.data.length >= 1 && request.resource.data.length <= 10000;
    }
    match /milestones/{id} {
     allow delete: if owner();
-    allow read: if owner() || (unitAccess(org) && signed() && exists(/databases/$(database)/documents/customerAccounts/$(request.auth.uid)));
+    allow read: if owner() || (unitAccess(org) && signed() && (exists(/databases/$(database)/documents/customerAccounts/$(request.auth.uid)) || request.auth.token.firebase.sign_in_provider == 'anonymous'));
     allow create, update: if owner() && request.resource.data.keys().hasOnly(['goal','type','name','itemId']) && request.resource.data.goal is int && request.resource.data.goal >= 1 && request.resource.data.goal <= 10000 && id == string(request.resource.data.goal) && request.resource.data.type in ['product','coupon','service'] && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 180 && request.resource.data.itemId is string;
    }
    match /milestoneRedemptions/{id} {

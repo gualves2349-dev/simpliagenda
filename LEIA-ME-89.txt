@@ -1,0 +1,3 @@
+89.0 - Fidelidade local, SimpliAgenda interna
+Publicar index.html (raiz), rapido/index.html e rapido/quick.js. Publicar firestore.rules no projeto interno. Regras ampliam somente leitura de configurações da trilha e marcos para sessões anônimas de unidades ativas. Não alteram escrita de pontos ou resgates.
+Saldo calculado pelos atendimentos completed do UID anônimo existente, como no perfil tradicional. Não limpar cookies/dados do site. Não há migração, login por telefone, recuperação entre dispositivos ou resgate automático nesta versão. O link no login abre a carteira da sessão local, não autentica por telefone. Não publicar na homologação antes de testar.
